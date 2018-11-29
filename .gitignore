@@ -1,7 +1,8 @@
 __pycache__/
 logs/
 backup/
+.idea/
+test/
 *.pyc
 *.swp
-.idea/
 *.xml
