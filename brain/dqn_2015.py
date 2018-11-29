@@ -42,26 +42,24 @@ class DeepQNetwork(BaseDQN):
             my_print('target_params_replaced', '-')
 
         # sample batch memory from all memory
-        if self.memory_counter > self.memory_size:
-            sample_index = np.random.choice(self.memory_size, size=self.batch_size)
-        else:
-            sample_index = np.random.choice(self.memory_counter, size=self.batch_size)
-        batch_memory = self.memory[sample_index, :]
+        # zip(): Take iterable objects as parameters, wrap the corresponding elements in the object into tuples,
+        # and then return a list of those tuples
+        samples_batch = random.sample(self.memory, self.batch_size)  # list of tuples
+        observation, eval_act_index, reward, observation_ = zip(*samples_batch)  # tuple of lists
 
-        length = reduce(lambda x, y: x*y, self.n_features)
-        observation = batch_memory[:, :length]
-        eval_act_index = batch_memory[:, length].astype(int)
-        reward = batch_memory[:, length + 1]
-        observation_ = batch_memory[:, -length:]
+        observation = np.array(observation)
+        eval_act_index = np.array(eval_act_index)
+        reward = np.array(reward)
+        observation_ = np.array(observation_)
 
         # input is all next observation
         q_eval_input_s_next, q_target_input_s_next = \
             self.sess.run([self.q_eval_net_out, self.q_target_net_out],
-                          feed_dict={self.eval_net_input: observation_.reshape((-1, 80, 80, 4)),
-                                     self.target_net_input: observation_.reshape((-1, 80, 80, 4))})
+                          feed_dict={self.eval_net_input: observation_.reshape((-1, 4, 80, 80)),
+                                     self.target_net_input: observation_.reshape((-1, 4, 80, 80))})
         # real q_eval, input is the current observation
         q_eval_input_s = self.sess.run(self.q_eval_net_out,
-                                       {self.eval_net_input: observation.reshape((-1, 80, 80, 4))})
+                                       {self.eval_net_input: observation.reshape((-1, 4, 80, 80))})
         if self.summary_flag:
             tf.summary.histogram("q_eval", q_eval_input_s)
 
@@ -74,7 +72,7 @@ class DeepQNetwork(BaseDQN):
         q_target[batch_index, eval_act_index] = reward + self.gamma * selected_q_next
 
         _, self.cost = self.sess.run([self.train_op, self.loss],
-                                     feed_dict={self.eval_net_input: observation.reshape((-1, 80, 80, 4)),
+                                     feed_dict={self.eval_net_input: observation.reshape((-1, 4, 80, 80)),
                                                 self.q_target: q_target})
         # self.cost_his.append(self.cost)
 
@@ -93,6 +91,6 @@ class DeepQNetwork(BaseDQN):
 
         if self.summary_flag:
             merge_all = self.sess.run(self.merge_op,
-                                      feed_dict={self.eval_net_input: observation.reshape((-1, 80, 80, 4)),
+                                      feed_dict={self.eval_net_input: observation.reshape((-1, 4, 80, 80)),
                                                  self.q_target: q_target})
             self.writer.add_summary(merge_all, self.learn_step_counter)

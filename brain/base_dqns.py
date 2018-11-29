@@ -208,7 +208,7 @@ class BaseDQN(object):
         self.image_size = self.hp.IMAGE_SIZE
 
         # initialize zero memory [s, a, r, s_]
-        self.memory = np.zeros((self.memory_size, reduce(lambda x, y: x*y, self.n_features) * 2 + 2))
+        self.memory = []
 
         # target network's soft_replacement
         with tf.variable_scope('soft_replacement'):
@@ -236,18 +236,16 @@ class BaseDQN(object):
         return gray
 
     def store_transition(self, s, a, r, s_):
-        transition = np.hstack((s.flatten(), [a, r], s_.flatten()))
-        # replace the old memory with new memory
-        index = self.memory_counter % self.memory_size
-        self.memory[index, :] = transition
-        self.memory_counter += 1
+        if len(self.memory) >= self.memory_size:
+            self.memory.pop(0)
+        self.memory.append((s, a, r, s_))
 
     def choose_action(self, observation):
         """ Choose action following epsilon-greedy policy.
         """
         if np.random.uniform() < self.epsilon:
             # forward feed the observation and get q value for every actions
-            actions_value = self.sess.run(self.q_eval_net_out, feed_dict={self.eval_net_input: observation.reshape(1, 80, 80, 4)})
+            actions_value = self.sess.run(self.q_eval_net_out, feed_dict={self.eval_net_input: observation.reshape(1, 4, 80, 80)})
             action_index = np.argmax(actions_value)
         else:
             action_index = np.random.randint(0, self.n_actions)
