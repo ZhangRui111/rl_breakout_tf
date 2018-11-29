@@ -57,11 +57,11 @@ class DeepQNetwork(BaseDQN):
         # input is all next observation
         q_eval_input_s_next, q_target_input_s_next = \
             self.sess.run([self.q_eval_net_out, self.q_target_net_out],
-                          feed_dict={self.eval_net_input: observation_.reshape((-1, 210, 160, 3)),
-                                     self.target_net_input: observation_.reshape((-1, 210, 160, 3))})
+                          feed_dict={self.eval_net_input: observation_.reshape((-1, 80, 80, 4)),
+                                     self.target_net_input: observation_.reshape((-1, 80, 80, 4))})
         # real q_eval, input is the current observation
         q_eval_input_s = self.sess.run(self.q_eval_net_out,
-                                       {self.eval_net_input: observation.reshape((-1, 210, 160, 3))})
+                                       {self.eval_net_input: observation.reshape((-1, 80, 80, 4))})
         if self.summary_flag:
             tf.summary.histogram("q_eval", q_eval_input_s)
 
@@ -74,7 +74,7 @@ class DeepQNetwork(BaseDQN):
         q_target[batch_index, eval_act_index] = reward + self.gamma * selected_q_next
 
         _, self.cost = self.sess.run([self.train_op, self.loss],
-                                     feed_dict={self.eval_net_input: observation.reshape((-1, 210, 160, 3)),
+                                     feed_dict={self.eval_net_input: observation.reshape((-1, 80, 80, 4)),
                                                 self.q_target: q_target})
         # self.cost_his.append(self.cost)
 
@@ -93,6 +93,6 @@ class DeepQNetwork(BaseDQN):
 
         if self.summary_flag:
             merge_all = self.sess.run(self.merge_op,
-                                      feed_dict={self.eval_net_input: observation.reshape((-1, 210, 160, 3)),
+                                      feed_dict={self.eval_net_input: observation.reshape((-1, 80, 80, 4)),
                                                  self.q_target: q_target})
             self.writer.add_summary(merge_all, self.learn_step_counter)

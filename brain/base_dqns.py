@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import tensorflow as tf
 
@@ -204,6 +205,7 @@ class BaseDQN(object):
         # total learning step
         self.learn_step_counter = 0
         self.memory_counter = 0
+        self.image_size = self.hp.IMAGE_SIZE
 
         # initialize zero memory [s, a, r, s_]
         self.memory = np.zeros((self.memory_size, reduce(lambda x, y: x*y, self.n_features) * 2 + 2))
@@ -214,8 +216,8 @@ class BaseDQN(object):
 
         # start a session
         gpu_options = tf.GPUOptions(allow_growth=True)
-        #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
-        #self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=True))
+        # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+        # self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=True))
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         self.sess.run(tf.global_variables_initializer())
 
@@ -224,6 +226,14 @@ class BaseDQN(object):
             self.writer = tf.summary.FileWriter(graph_path, self.sess.graph)
 
         # self.cost_his = []
+
+    def preprocess_image(self, img):
+        # img = img / 255.0
+        img = img[30:-15, 5:-5:, :]  # image cropping
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # convert from BGR to GRAY
+        gray = cv2.resize(gray, (self.image_size, self.image_size), interpolation=cv2.INTER_NEAREST)
+
+        return gray
 
     def store_transition(self, s, a, r, s_):
         transition = np.hstack((s.flatten(), [a, r], s_.flatten()))

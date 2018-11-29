@@ -5,8 +5,10 @@ This is base hyper-parameters, you can modify them here.
 
 class BaseHyperparameters(object):
     def __init__(self):
-        self.N_FEATURES = [210, 160, 3]
+        # self.N_FEATURES = [210, 160, 3]  # Without cropping and stack.
+        self.N_FEATURES = [80, 80, 4]  # With cropping and stack.
         self.N_ACTIONS = 4
+        self.IMAGE_SIZE = 80
         self.model = 'null'
 
         self.MAX_EPISODES = 5000  # 150000 : 500
