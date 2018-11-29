@@ -247,7 +247,7 @@ class BaseDQN(object):
         """
         if np.random.uniform() < self.epsilon:
             # forward feed the observation and get q value for every actions
-            actions_value = self.sess.run(self.q_eval_net_out, feed_dict={self.eval_net_input: observation.reshape(1, 210, 160, 3)})
+            actions_value = self.sess.run(self.q_eval_net_out, feed_dict={self.eval_net_input: observation.reshape(1, 80, 80, 4)})
             action_index = np.argmax(actions_value)
         else:
             action_index = np.random.randint(0, self.n_actions)
