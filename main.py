@@ -1,4 +1,3 @@
-import errno
 import gym
 import numpy as np
 import os
@@ -66,15 +65,16 @@ def train_model(brain):
 
 
 def main():
-    # parameters adjusting.
+    # #parameters adjusting.
     # for learning_rate in [1E-4, 1E-3, 1E-5]:
     #     for discount_factor in [0.99, 0.5]:
     #         tf.reset_default_graph()
     #         token = str(learning_rate) + str(discount_factor)
     #         train_model(token, learning_rate, discount_factor)
+
     tf.reset_default_graph()
-    # choose model
-    model = 'dueling_dqn'
+    # #choose model
+    model = 'pri_dqn'
 
     if model == 'double_dqn':
         from brain.double_dqn import DeepQNetwork
@@ -96,7 +96,18 @@ def main():
         token = 'token'  # token is useful when para-adjusting
         brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
         train_model(brain)
+    elif model == 'pri_dqn':
+        from brain.pri_dqn import DeepQNetwork
+        from network.network_pri_dqn import build_network
+        from hyper_paras.hp_pri_dqn import Hyperparameters
+
+        hp = Hyperparameters()
+        bn = build_network()
+        token = 'token'  # token is useful when para-adjusting
+        brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
+        train_model(brain)
     else:
+        print('No model satisfied, try dqn_2015!')
         from brain.dqn_2015 import DeepQNetwork
         from network.network_dqn_2015 import build_network
         from hyper_paras.hp_dqn_2015 import Hyperparameters

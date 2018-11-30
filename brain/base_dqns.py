@@ -91,13 +91,11 @@ class Memory(object):  # stored as ( s, a, r, s_ ) in SumTree
         self.beta_increment_per_sampling = para.beta_increment_per_sampling
         self.abs_err_upper = para.abs_err_upper  # clipped abs error
 
-    def store(self, transition, filename, overwrite):
+    def store(self, transition):
         max_p = np.max(self.tree.tree[-self.tree.capacity:])
         if max_p == 0:
             max_p = self.abs_err_upper
         self.tree.add(max_p, transition)  # set the max p for new p
-        write_file(filename, '\nself.tree.tree: ' + str(self.tree.tree), overwrite)
-        write_file(filename, 'self.tree.data: \n' + str(self.tree.data))
 
     def sample(self, n):
         b_idx, b_memory, ISWeights = np.empty((n,), dtype=np.int32), \
@@ -141,6 +139,7 @@ class BaseDQN(object):
                  network_build,
                  hp,
                  token,
+                 prioritized=False,
                  initial_epsilon=None,
                  finial_epsilon=None,
                  finial_epsilon_frame=None,
@@ -189,6 +188,7 @@ class BaseDQN(object):
         self.n_stack = self.hp.N_STACK
         self.image_size = self.hp.IMAGE_SIZE
         self.max_episode = self.hp.MAX_EPISODES
+        self.prioritized = prioritized
         self.flag = True  # output signal
         self.summary_flag = self.hp.OUTPUT_GRAPH  # tf.summary flag
 
@@ -207,7 +207,12 @@ class BaseDQN(object):
         self.learn_step_counter = 0
 
         # initialize zero memory [s, a, r, s_]
-        self.memory = []
+        if self.prioritized:
+            memory_paras = MemoryParas(self.hp.M_EPSILON, self.hp.M_ALPHA, self.hp.M_BETA,
+                                       self.hp.M_BETA_INCRE, self.hp.M_ABS_ERROR_UPPER)
+            self.memory = Memory(capacity=self.memory_size, para=memory_paras)
+        else:
+            self.memory = []
 
         # target network's soft_replacement
         with tf.variable_scope('soft_replacement'):
