@@ -2,19 +2,14 @@ import tensorflow as tf
 from hyper_paras.hp_dqn_2015 import Hyperparameters
 
 
-def build_network(lr, n_stack=None, image_size=None, n_actions=None):
+def build_network(lr=None, n_stack=None, image_size=None, n_actions=None):
     """ Build the network for RL algorithm.
-    :param model: string
-    :param cv: string
-    :return:
-        [[eval_net_input, target_net_input, q_target_0, q_target_1]: input
-        [q_eval_net_out, loss_0, loss_1, _train_op_0, _train_op_1, q_target_net_out]: output
-        [e_params, t_params]: weights
-        [model, cv]]: model and cv
     """
     # init Hp
     hp = Hyperparameters()
     flag = hp.model
+    if lr is None:
+        lr = hp.LEARNING_RATE
     if n_stack is None:
         n_stack = hp.N_STACK
     if image_size is None:

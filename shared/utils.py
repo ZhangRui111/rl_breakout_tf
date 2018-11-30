@@ -3,6 +3,7 @@ import errno
 import os
 import csv
 import shutil
+import tensorflow as tf
 
 
 def binary_array_to_int(array, size):
@@ -102,3 +103,31 @@ def copy_rename_folder(oldpath, newpath, new_name):
             print('Warning: old path is not valid!')
             if exc.errno != errno.EEXIST:
                 raise
+
+
+def restore_parameters(sess, restore_path):
+    """ Save and restore Network's weights.
+    """
+    saver = tf.train.Saver(max_to_keep=5)
+    checkpoint = tf.train.get_checkpoint_state(restore_path)
+    if checkpoint and checkpoint.model_checkpoint_path:
+        saver.restore(sess, checkpoint.model_checkpoint_path)
+        print("Successfully loaded:", checkpoint.model_checkpoint_path)
+        path_ = checkpoint.model_checkpoint_path
+        step = int((path_.split('-'))[-1])
+    else:
+        # Re-train the network from zero.
+        print("Could not find old network weights")
+        step = 0
+    return saver, step
+
+
+def save_parameters(sess, save_path, saver, name):
+    if not os.path.exists(os.path.dirname(save_path)):
+        try:
+            os.makedirs(os.path.dirname(save_path))
+        except OSError as exc:  # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
+    saver.save(sess, name)
+    my_print('save weights', '-')

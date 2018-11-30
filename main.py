@@ -5,58 +5,18 @@ import os
 import tensorflow as tf
 import time
 
-from brain.dqn_2015 import DeepQNetwork
-from network.network_dqn_2015 import build_network
-from hyper_paras.hp_dqn_2015 import Hyperparameters
-from shared.utils import write_ndarray, read_ndarray, my_print
+from shared.utils import restore_parameters, save_parameters, write_ndarray, read_ndarray, my_print
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 
-def restore_parameters(sess, restore_path):
-    """ Save and restore Network's weights.
-    """
-    saver = tf.train.Saver(max_to_keep=5)
-    checkpoint = tf.train.get_checkpoint_state(restore_path)
-    if checkpoint and checkpoint.model_checkpoint_path:
-        saver.restore(sess, checkpoint.model_checkpoint_path)
-        print("Successfully loaded:", checkpoint.model_checkpoint_path)
-        path_ = checkpoint.model_checkpoint_path
-        step = int((path_.split('-'))[-1])
-    else:
-        # Re-train the network from zero.
-        print("Could not find old network weights")
-        step = 0
-    return saver, step
-
-
-def save_parameters(sess, save_path, saver, name):
-    if not os.path.exists(os.path.dirname(save_path)):
-        try:
-            os.makedirs(os.path.dirname(save_path))
-        except OSError as exc:  # Guard against race condition
-            if exc.errno != errno.EEXIST:
-                raise
-    saver.save(sess, name)
-    my_print('save weights', '-')
-
-
-def train_model(token, learning_rate=None, discount_factor=None):
+def train_model(brain):
     env = gym.make('Breakout-v0')
     # env = env.unwrapped
     # print(env.action_space)
     # print(env.observation_space)
-    hp = Hyperparameters()
     data_list = np.arange(6).reshape((1, 6))
-
-    if learning_rate is None:
-        learning_rate = hp.LEARNING_RATE
-    if discount_factor is None:
-        discount_factor = hp.DISCOUNT_FACTOR
-
-    bn = build_network(learning_rate)
-    brain = DeepQNetwork(network_build=bn, hp=hp, token=token, discount_factor=discount_factor)
 
     saver, load_episode = restore_parameters(brain.sess, brain.graph_path)
 
@@ -106,11 +66,46 @@ def train_model(token, learning_rate=None, discount_factor=None):
 
 
 def main():
-    for learning_rate in [1E-4, 1E-3, 1E-5]:
-        for discount_factor in [0.99, 0.5]:
-            tf.reset_default_graph()
-            token = str(learning_rate) + str(discount_factor)
-            train_model(token, learning_rate, discount_factor)
+    # parameters adjusting.
+    # for learning_rate in [1E-4, 1E-3, 1E-5]:
+    #     for discount_factor in [0.99, 0.5]:
+    #         tf.reset_default_graph()
+    #         token = str(learning_rate) + str(discount_factor)
+    #         train_model(token, learning_rate, discount_factor)
+    tf.reset_default_graph()
+    # choose model
+    model = 'dueling_dqn'
+
+    if model == 'double_dqn':
+        from brain.double_dqn import DeepQNetwork
+        from network.network_double_dqn import build_network
+        from hyper_paras.hp_double_dqn import Hyperparameters
+
+        hp = Hyperparameters()
+        bn = build_network()
+        token = 'token'  # token is useful when para-adjusting
+        brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
+        train_model(brain)
+    elif model == 'dueling_dqn':
+        from brain.dueling_dqn import DeepQNetwork
+        from network.network_dueling_dqn import build_network
+        from hyper_paras.hp_dueling_dqn import Hyperparameters
+
+        hp = Hyperparameters()
+        bn = build_network()
+        token = 'token'  # token is useful when para-adjusting
+        brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
+        train_model(brain)
+    else:
+        from brain.dqn_2015 import DeepQNetwork
+        from network.network_dqn_2015 import build_network
+        from hyper_paras.hp_dqn_2015 import Hyperparameters
+
+        hp = Hyperparameters()
+        bn = build_network()
+        token = 'token'  # token is useful when para-adjusting
+        brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
+        train_model(brain)
 
 
 if __name__ == '__main__':
