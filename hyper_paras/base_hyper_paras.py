@@ -5,25 +5,28 @@ This is base hyper-parameters, you can modify them here.
 
 class BaseHyperparameters(object):
     def __init__(self):
-        self.N_FEATURES = [210, 160, 3]
+        # self.N_FEATURES = [210, 160, 3]  # Without cropping and stack.
+        self.N_FEATURES = [4, 80, 80]  # With cropping and stack.
         self.N_ACTIONS = 4
+        self.IMAGE_SIZE = 80
+        self.N_STACK = 4
         self.model = 'null'
 
-        self.MAX_EPISODES = 5000  # 150000 : 500
+        self.MAX_EPISODES = 50000  # 50000 : 500
         self.LEARNING_RATE = 0.0001
         self.INITIAL_EXPLOR = 0  # 0 : 0.5
         self.FINAL_EXPLOR = 0.9
-        self.FINAL_EXPLOR_FRAME = 4000  # 100000 : 450
+        self.FINAL_EXPLOR_FRAME = 45000  # 45000 : 450
         self.DISCOUNT_FACTOR = 0.99
-        self.MINIBATCH_SIZE = 64  # 32 : 8
-        self.REPLY_START_SIZE = 1000  # 10000 : 100
-        self.REPLY_MEMORY_SIZE = 500
-        self.TARGET_NETWORK_UPDATE_FREQUENCY = 800  # 2000 : 150
+        self.MINIBATCH_SIZE = 32  # 32 : 8
+        self.REPLY_START_SIZE = 400  # 400 : 100
+        self.REPLY_MEMORY_SIZE = 200000
+        self.TARGET_NETWORK_UPDATE_FREQUENCY = 10000  # 10000 : 150
 
         # log and output
-        self.WEIGHTS_SAVER_ITER = 1000  # 2000 : 200
-        self.OUTPUT_SAVER_ITER = 1000  # 1000 : 100
-        self.OUTPUT_GRAPH = True
+        self.WEIGHTS_SAVER_ITER = 2000  # 2000 : 200
+        self.OUTPUT_SAVER_ITER = 2000  # 2000 : 100
+        self.OUTPUT_GRAPH = False
         self.SAVED_NETWORK_PATH = './logs/network/'
         self.LOGS_DATA_PATH = './logs/data/'
         self.SAVED_NETWORK_PATH_BACK = './backup/network/'

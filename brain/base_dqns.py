@@ -1,8 +1,8 @@
+import cv2
 import numpy as np
 import tensorflow as tf
 
-from functools import reduce
-from shared.utils import write_file, my_print
+from shared.utils import write_file
 
 # Clears the default graph stack and resets the global default graph.
 # tf.reset_default_graph()
@@ -187,6 +187,9 @@ class BaseDQN(object):
 
         self.n_actions = self.hp.N_ACTIONS
         self.n_features = self.hp.N_FEATURES
+        self.n_stack = self.hp.N_STACK
+        self.image_size = self.hp.IMAGE_SIZE
+        self.max_episode = self.hp.MAX_EPISODES
         self.flag = True  # output signal
         self.summary_flag = self.hp.OUTPUT_GRAPH  # tf.summary flag
 
@@ -203,10 +206,10 @@ class BaseDQN(object):
 
         # total learning step
         self.learn_step_counter = 0
-        self.memory_counter = 0
+        self.image_size = self.hp.IMAGE_SIZE
 
         # initialize zero memory [s, a, r, s_]
-        self.memory = np.zeros((self.memory_size, reduce(lambda x, y: x*y, self.n_features) * 2 + 2))
+        self.memory = []
 
         # target network's soft_replacement
         with tf.variable_scope('soft_replacement'):
@@ -214,8 +217,8 @@ class BaseDQN(object):
 
         # start a session
         gpu_options = tf.GPUOptions(allow_growth=True)
-        #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
-        #self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=True))
+        # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+        # self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=True))
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         self.sess.run(tf.global_variables_initializer())
 
@@ -225,19 +228,26 @@ class BaseDQN(object):
 
         # self.cost_his = []
 
+    def preprocess_image(self, img):
+        # img = img / 255.0
+        img = img[30:-15, 5:-5:, :]  # image cropping
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # convert from BGR to GRAY
+        gray = cv2.resize(gray, (self.image_size, self.image_size), interpolation=cv2.INTER_NEAREST)
+
+        return gray
+
     def store_transition(self, s, a, r, s_):
-        transition = np.hstack((s.flatten(), [a, r], s_.flatten()))
-        # replace the old memory with new memory
-        index = self.memory_counter % self.memory_size
-        self.memory[index, :] = transition
-        self.memory_counter += 1
+        if len(self.memory) >= self.memory_size:
+            self.memory.pop(0)
+        self.memory.append((s, a, r, s_))
 
     def choose_action(self, observation):
         """ Choose action following epsilon-greedy policy.
         """
         if np.random.uniform() < self.epsilon:
             # forward feed the observation and get q value for every actions
-            actions_value = self.sess.run(self.q_eval_net_out, feed_dict={self.eval_net_input: observation.reshape(1, 210, 160, 3)})
+            actions_value = self.sess.run(self.q_eval_net_out, feed_dict={
+                self.eval_net_input: observation.reshape(1, self.n_stack, self.image_size, self.image_size)})
             action_index = np.argmax(actions_value)
         else:
             action_index = np.random.randint(0, self.n_actions)
@@ -256,7 +266,7 @@ class BaseDQN(object):
         action = action_index
         return action
 
-    def learn(self):
+    def learn(self, incre_epsilon):
         pass
 
     def close_session(self):
