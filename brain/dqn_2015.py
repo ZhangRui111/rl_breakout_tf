@@ -2,7 +2,6 @@ import numpy as np
 import random
 import tensorflow as tf
 
-from functools import reduce
 from brain.base_dqns import BaseDQN
 from shared.utils import my_print
 
@@ -35,11 +34,13 @@ class DeepQNetwork(BaseDQN):
                          reply_memory_size,
                          target_network_update_frequency)
 
-    def learn(self):
+    def learn(self, incre_epsilon):
         # check to replace target parameters
         if self.learn_step_counter % self.replace_target_iter == 0 and self.learn_step_counter != 0:
             self.sess.run(self.target_replace_op)
             my_print('target_params_replaced', '-')
+
+        self.learn_step_counter += 1
 
         # sample batch memory from all memory
         # zip(): Take iterable objects as parameters, wrap the corresponding elements in the object into tuples,
@@ -53,13 +54,16 @@ class DeepQNetwork(BaseDQN):
         observation_ = np.array(observation_)
 
         # input is all next observation
-        q_eval_input_s_next, q_target_input_s_next = \
-            self.sess.run([self.q_eval_net_out, self.q_target_net_out],
-                          feed_dict={self.eval_net_input: observation_.reshape((-1, 4, 80, 80)),
-                                     self.target_net_input: observation_.reshape((-1, 4, 80, 80))})
+        # q_eval_input_s_next, q_target_input_s_next = \
+        #     self.sess.run([self.q_eval_net_out, self.q_target_net_out], feed_dict={
+        #         self.eval_net_input: observation_.reshape((-1, self.n_stack, self.n_features, self.n_features)),
+        #         self.target_net_input: observation_.reshape((-1, self.n_stack, self.n_features, self.n_features))})
+        q_target_input_s_next = self.sess.run(self.q_target_net_out, feed_dict={
+            self.target_net_input: observation_.reshape((-1, self.n_stack, self.image_size, self.image_size))})
         # real q_eval, input is the current observation
-        q_eval_input_s = self.sess.run(self.q_eval_net_out,
-                                       {self.eval_net_input: observation.reshape((-1, 4, 80, 80))})
+        q_eval_input_s = self.sess.run(self.q_eval_net_out, feed_dict={
+            self.eval_net_input: observation.reshape((-1, self.n_stack, self.image_size, self.image_size))})
+
         if self.summary_flag:
             tf.summary.histogram("q_eval", q_eval_input_s)
 
@@ -71,17 +75,16 @@ class DeepQNetwork(BaseDQN):
 
         q_target[batch_index, eval_act_index] = reward + self.gamma * selected_q_next
 
-        _, self.cost = self.sess.run([self.train_op, self.loss],
-                                     feed_dict={self.eval_net_input: observation.reshape((-1, 4, 80, 80)),
-                                                self.q_target: q_target})
-        # self.cost_his.append(self.cost)
+        _, cost = self.sess.run([self.train_op, self.loss], feed_dict={
+            self.eval_net_input: observation.reshape((-1, self.n_stack, self.image_size, self.image_size)),
+            self.q_target: q_target})
 
         # epsilon-decay
-        self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon < self.epsilon_max else self.epsilon_max
-        self.learn_step_counter += 1
+        if incre_epsilon:
+            self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon < self.epsilon_max else self.epsilon_max
 
         if self.summary_flag:
-            tf.summary.scalar("cost", self.cost)
+            tf.summary.scalar("cost", cost)
 
         if self.summary_flag:
             # merge_all() must follow all tf.summary
@@ -90,7 +93,7 @@ class DeepQNetwork(BaseDQN):
                 self.flag = False
 
         if self.summary_flag:
-            merge_all = self.sess.run(self.merge_op,
-                                      feed_dict={self.eval_net_input: observation.reshape((-1, 4, 80, 80)),
-                                                 self.q_target: q_target})
+            merge_all = self.sess.run(self.merge_op, feed_dict={
+                self.eval_net_input: observation.reshape((-1, self.n_stack, self.image_size, self.image_size)),
+                self.q_target: q_target})
             self.writer.add_summary(merge_all, self.learn_step_counter)

@@ -2,6 +2,7 @@ import gym
 import numpy as np
 import os
 import tensorflow as tf
+import time
 
 from brain.dqn_2015 import DeepQNetwork
 from network.network_dqn_2015 import build_network
@@ -26,36 +27,39 @@ def train_model(token, learning_rate=None, discount_factor=None):
     bn = build_network(learning_rate)
     brain = DeepQNetwork(network_build=bn, hp=hp, token=token, discount_factor=discount_factor)
 
+    # train for numbers of episodes
     total_steps = 0
-    for i_episode in range(brain.hp.MAX_EPISODES):
+    for i_episode in range(brain.max_episode):
 
         observation = env.reset()
         observation = brain.preprocess_image(observation)
         state = np.stack([observation] * 4)
 
         ep_reward = 0
+        num_step = 0
+        start_time = time.time()
 
         while True:
             # env.render()
             action = brain.choose_action(state)
             observation_, reward, done, info = env.step(action)
             observation_ = brain.preprocess_image(observation_)
-            next_state = np.concatenate([state[1:], np.expand_dims(observation, 0)], axis=0)
+            next_state = np.concatenate([state[1:], np.expand_dims(observation_, 0)], axis=0)
 
             brain.store_transition(state, action, reward, next_state)
 
-            if total_steps > brain.replay_start:
-                brain.learn()
-
             ep_reward += reward
+            num_step += 1
 
-            if not done:
-                state = next_state
-            else:
-                print('episode: ', i_episode, ' | reward: ', ep_reward)
+            if i_episode > brain.replay_start:
+                brain.learn(done)
+
+            if done:
+                print('episode: ', i_episode, ' | reward: ', ep_reward, 'num_step: ', num_step, ' | total_step: ',
+                      total_steps, 'epsilon', brain.epsilon, 'episode_time', time.time() - start_time)
                 break
 
-            observation = observation_
+            state = next_state
             total_steps += 1
 
 

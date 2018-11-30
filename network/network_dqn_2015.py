@@ -2,7 +2,7 @@ import tensorflow as tf
 from hyper_paras.hp_dqn_2015 import Hyperparameters
 
 
-def build_network(lr, two_fl=True, n_features=None, n_actions=None):
+def build_network(lr, two_fl=True, image_size=None, n_actions=None):
     """ Build the network for RL algorithm.
     :param model: string
     :param cv: string
@@ -15,34 +15,34 @@ def build_network(lr, two_fl=True, n_features=None, n_actions=None):
     # init Hp
     hp = Hyperparameters()
     flag = hp.model
-    if n_features is None:
-        n_features = hp.N_FEATURES
+    if image_size is None:
+        image_size = hp.IMAGE_SIZE
     if n_actions is None:
         n_actions = hp.N_ACTIONS
-    # connect None with n_features or n_actions.
-    if type(n_features) is list:
-        f = n_features.copy()
-        f.insert(0, None)
-        features = f
-    else:
-        features = [None] + n_features
-    if type(n_actions) is list:
-        a = n_actions.copy()
-        a.insert(0, None)
-        actions = a
-    else:
-        actions = [None] + [n_actions]
+    # # connect None with n_features or n_actions.
+    # if type(n_features) is list:
+    #     f = n_features.copy()
+    #     f.insert(0, None)
+    #     features = f
+    # else:
+    #     features = [None] + n_features
+    # if type(n_actions) is list:
+    #     a = n_actions.copy()
+    #     a.insert(0, None)
+    #     actions = a
+    # else:
+    #     actions = [None] + [n_actions]
 
     """This network occupy 879Mib GPU memory."""
     # ------------------ all inputs --------------------------
     # input for target net
-    eval_net_input = tf.placeholder(tf.float32, features, name='eval_net_input_' + flag)
+    eval_net_input = tf.placeholder(tf.float32, shape=[None, hp.N_STACK, image_size, image_size],
+                                    name='eval_net_input_' + flag)
     # input for eval net
-    target_net_input = tf.placeholder(tf.float32, features, name='target_net_input_' + flag)
+    target_net_input = tf.placeholder(tf.float32, shape=[None, hp.N_STACK, image_size, image_size],
+                                      name='target_net_input_' + flag)
     # q_target for loss
-    q_target = tf.placeholder(tf.float32, actions, name='q_target_' + flag)
-    # initializer
-    # w_initializer, b_initializer = tf.random_normal_initializer(0., 0.01), tf.constant_initializer(0)
+    q_target = tf.placeholder(tf.float32, shape=[None, n_actions], name='q_target_' + flag)
 
     # ------------------ build evaluate_net ------------------
     with tf.variable_scope('eval_net_' + flag):

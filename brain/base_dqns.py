@@ -2,8 +2,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-from functools import reduce
-from shared.utils import write_file, my_print
+from shared.utils import write_file
 
 # Clears the default graph stack and resets the global default graph.
 # tf.reset_default_graph()
@@ -188,6 +187,9 @@ class BaseDQN(object):
 
         self.n_actions = self.hp.N_ACTIONS
         self.n_features = self.hp.N_FEATURES
+        self.n_stack = self.hp.N_STACK
+        self.image_size = self.hp.IMAGE_SIZE
+        self.max_episode = self.hp.MAX_EPISODES
         self.flag = True  # output signal
         self.summary_flag = self.hp.OUTPUT_GRAPH  # tf.summary flag
 
@@ -204,7 +206,6 @@ class BaseDQN(object):
 
         # total learning step
         self.learn_step_counter = 0
-        self.memory_counter = 0
         self.image_size = self.hp.IMAGE_SIZE
 
         # initialize zero memory [s, a, r, s_]
@@ -245,7 +246,8 @@ class BaseDQN(object):
         """
         if np.random.uniform() < self.epsilon:
             # forward feed the observation and get q value for every actions
-            actions_value = self.sess.run(self.q_eval_net_out, feed_dict={self.eval_net_input: observation.reshape(1, 4, 80, 80)})
+            actions_value = self.sess.run(self.q_eval_net_out, feed_dict={
+                self.eval_net_input: observation.reshape(1, self.n_stack, self.image_size, self.image_size)})
             action_index = np.argmax(actions_value)
         else:
             action_index = np.random.randint(0, self.n_actions)
@@ -264,7 +266,7 @@ class BaseDQN(object):
         action = action_index
         return action
 
-    def learn(self):
+    def learn(self, incre_epsilon):
         pass
 
     def close_session(self):
