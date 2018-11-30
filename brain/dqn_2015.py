@@ -67,12 +67,10 @@ class DeepQNetwork(BaseDQN):
         if self.summary_flag:
             tf.summary.histogram("q_eval", q_eval_input_s)
 
+        # q target
         q_target = q_eval_input_s.copy()
-
         batch_index = np.arange(self.batch_size, dtype=np.int32)
-
         selected_q_next = np.max(q_target_input_s_next, axis=1)
-
         q_target[batch_index, eval_act_index] = reward + self.gamma * selected_q_next
 
         _, cost = self.sess.run([self.train_op, self.loss], feed_dict={
@@ -85,14 +83,10 @@ class DeepQNetwork(BaseDQN):
 
         if self.summary_flag:
             tf.summary.scalar("cost", cost)
-
-        if self.summary_flag:
             # merge_all() must follow all tf.summary
             if self.flag:
                 self.merge_op = tf.summary.merge_all()
                 self.flag = False
-
-        if self.summary_flag:
             merge_all = self.sess.run(self.merge_op, feed_dict={
                 self.eval_net_input: observation.reshape((-1, self.n_stack, self.image_size, self.image_size)),
                 self.q_target: q_target})

@@ -186,7 +186,6 @@ class BaseDQN(object):
             self.replace_target_iter = target_network_update_frequency
 
         self.n_actions = self.hp.N_ACTIONS
-        self.n_features = self.hp.N_FEATURES
         self.n_stack = self.hp.N_STACK
         self.image_size = self.hp.IMAGE_SIZE
         self.max_episode = self.hp.MAX_EPISODES
@@ -206,7 +205,6 @@ class BaseDQN(object):
 
         # total learning step
         self.learn_step_counter = 0
-        self.image_size = self.hp.IMAGE_SIZE
 
         # initialize zero memory [s, a, r, s_]
         self.memory = []
@@ -221,15 +219,14 @@ class BaseDQN(object):
         # self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=True))
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         self.sess.run(tf.global_variables_initializer())
+        self.graph_path = self.hp.LOGS_DATA_PATH + self.hp.model + '/' + self.token + '/'
 
         if self.summary_flag:
-            graph_path = self.hp.LOGS_DATA_PATH + self.hp.model + '/' + self.token + '/'
-            self.writer = tf.summary.FileWriter(graph_path, self.sess.graph)
+            self.writer = tf.summary.FileWriter(self.graph_path, self.sess.graph)
 
         # self.cost_his = []
 
     def preprocess_image(self, img):
-        # img = img / 255.0
         img = img[30:-15, 5:-5:, :]  # image cropping
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # convert from BGR to GRAY
         gray = cv2.resize(gray, (self.image_size, self.image_size), interpolation=cv2.INTER_NEAREST)

@@ -6,7 +6,7 @@ This is base hyper-parameters, you can modify them here.
 class BaseHyperparameters(object):
     def __init__(self):
         # self.N_FEATURES = [210, 160, 3]  # Without cropping and stack.
-        self.N_FEATURES = [4, 80, 80]  # With cropping and stack.
+        # self.N_FEATURES = [4, 80, 80]  # With cropping and stack.
         self.N_ACTIONS = 4
         self.IMAGE_SIZE = 80
         self.N_STACK = 4
@@ -25,7 +25,7 @@ class BaseHyperparameters(object):
 
         # log and output
         self.WEIGHTS_SAVER_ITER = 2000  # 2000 : 200
-        self.OUTPUT_SAVER_ITER = 2000  # 2000 : 100
+        self.OUTPUT_SAVER_ITER = 1000  # 1000 : 100
         self.OUTPUT_GRAPH = False
         self.SAVED_NETWORK_PATH = './logs/network/'
         self.LOGS_DATA_PATH = './logs/data/'

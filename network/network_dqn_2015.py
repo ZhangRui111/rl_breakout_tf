@@ -2,7 +2,7 @@ import tensorflow as tf
 from hyper_paras.hp_dqn_2015 import Hyperparameters
 
 
-def build_network(lr, two_fl=True, image_size=None, n_actions=None):
+def build_network(lr, n_stack=None, image_size=None, n_actions=None):
     """ Build the network for RL algorithm.
     :param model: string
     :param cv: string
@@ -15,6 +15,8 @@ def build_network(lr, two_fl=True, image_size=None, n_actions=None):
     # init Hp
     hp = Hyperparameters()
     flag = hp.model
+    if n_stack is None:
+        n_stack = hp.N_STACK
     if image_size is None:
         image_size = hp.IMAGE_SIZE
     if n_actions is None:
@@ -36,10 +38,10 @@ def build_network(lr, two_fl=True, image_size=None, n_actions=None):
     """This network occupy 879Mib GPU memory."""
     # ------------------ all inputs --------------------------
     # input for target net
-    eval_net_input = tf.placeholder(tf.float32, shape=[None, hp.N_STACK, image_size, image_size],
+    eval_net_input = tf.placeholder(tf.float32, shape=[None, n_stack, image_size, image_size],
                                     name='eval_net_input_' + flag)
     # input for eval net
-    target_net_input = tf.placeholder(tf.float32, shape=[None, hp.N_STACK, image_size, image_size],
+    target_net_input = tf.placeholder(tf.float32, shape=[None, n_stack, image_size, image_size],
                                       name='target_net_input_' + flag)
     # q_target for loss
     q_target = tf.placeholder(tf.float32, shape=[None, n_actions], name='q_target_' + flag)
