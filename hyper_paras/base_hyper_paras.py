@@ -33,8 +33,9 @@ class BaseHyperparameters(object):
         self.LOGS_DATA_PATH_BACK = './backup/data/'
 
         # Class Memory
-        self.M_EPSILON = 0.01  # small amount to avoid zero priority
+        self.M_NONZERO_EPSILON = 0.01  # small amount to avoid zero priority
         self.M_ALPHA = 0.6  # [0~1] convert the importance of TD error to priority
-        self.M_BETA = 0.4  # importance-sampling, from initial value increasing to 1
-        self.M_BETA_INCRE = 0.001
+        self.M_INITIAL_BETA = 0.4  # importance-sampling, from initial value increasing to 1
+        self.M_FINAL_BETA = 1
+        self.M_FINAL_BETA_FRAME = 45000  # 45000 : 450
         self.M_ABS_ERROR_UPPER = 1.  # clipped abs error

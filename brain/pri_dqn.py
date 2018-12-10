@@ -1,3 +1,7 @@
+"""
+This is the prioritized reply dqn with proportional stochastic prioritization.
+Another stochastic prioritization way is rank-based stochastic prioritization.
+"""
 import numpy as np
 import random
 import tensorflow as tf
@@ -42,7 +46,11 @@ class DeepQNetwork(BaseDQN):
         transition = np.hstack((s.flatten(), a, [r], s_.flatten()))
         self.memory.store(transition)  # have high priority for newly arrived transition
 
-    def learn(self, incre_epsilon):
+    def learn(self, episode_done):
+        """
+        :param episode_done: only update hyper-parameter beta (in pri_dqn) and epsilon when episode_done is True.
+        :return:
+        """
         # check to replace target parameters
         if self.learn_step_counter % self.replace_target_iter == 0 and self.learn_step_counter != 0:
             self.sess.run(self.target_replace_op)
@@ -50,8 +58,8 @@ class DeepQNetwork(BaseDQN):
 
         self.learn_step_counter += 1
 
-        # sample batch
-        tree_idx, batch_memory, ISWeights = self.memory.sample(self.batch_size)
+        # sample batch, tree_idx is not used.
+        tree_idx, batch_memory, ISWeights = self.memory.sample(self.batch_size, episode_done)
 
         length = self.n_stack * self.image_size * self.image_size
         observation = batch_memory[:, :length]
@@ -81,7 +89,7 @@ class DeepQNetwork(BaseDQN):
             self.ISWeights: ISWeights})
 
         # epsilon-decay
-        if incre_epsilon:
+        if episode_done:
             self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon < self.epsilon_max else self.epsilon_max
 
         if self.summary_flag:
