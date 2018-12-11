@@ -1,3 +1,7 @@
+"""
+This is the prioritized reply dqn with proportional stochastic prioritization.
+Another stochastic prioritization way is rank-based stochastic prioritization.
+"""
 import numpy as np
 import random
 import tensorflow as tf
@@ -14,7 +18,7 @@ class DeepQNetwork(BaseDQN):
                  network_build,
                  hp,
                  token,
-                 prioritized=False,
+                 prioritized=True,
                  initial_epsilon=None,
                  finial_epsilon=None,
                  finial_epsilon_frame=None,
@@ -35,8 +39,18 @@ class DeepQNetwork(BaseDQN):
                          reply_start,
                          reply_memory_size,
                          target_network_update_frequency)
+        self.abs_error = network_build[3][0]
+        self.ISWeights = network_build[3][1]
 
-    def learn(self, incre_epsilon):
+    def store_transition(self, s, a, r, s_):
+        transition = np.hstack((s.flatten(), a, [r], s_.flatten()))
+        self.memory.store(transition)  # have high priority for newly arrived transition
+
+    def learn(self, episode_done):
+        """
+        :param episode_done: only update hyper-parameter beta (in pri_dqn) and epsilon when episode_done is True.
+        :return:
+        """
         # check to replace target parameters
         if self.learn_step_counter % self.replace_target_iter == 0 and self.learn_step_counter != 0:
             self.sess.run(self.target_replace_op)
@@ -44,22 +58,16 @@ class DeepQNetwork(BaseDQN):
 
         self.learn_step_counter += 1
 
-        # sample batch memory from all memory
-        # zip(): Take iterable objects as parameters, wrap the corresponding elements in the object into tuples,
-        # and then return a list of those tuples
-        samples_batch = random.sample(self.memory, self.batch_size)  # list of tuples
-        observation, eval_act_index, reward, observation_ = zip(*samples_batch)  # tuple of lists
+        # sample batch, tree_idx is not used.
+        tree_idx, batch_memory, ISWeights = self.memory.sample(self.batch_size, episode_done)
 
-        observation = np.array(observation)
-        eval_act_index = np.array(eval_act_index)
-        reward = np.array(reward)
-        observation_ = np.array(observation_)
+        length = self.n_stack * self.image_size * self.image_size
+        observation = batch_memory[:, :length]
+        eval_act_index = batch_memory[:, length].astype(int)
+        reward = batch_memory[:, length + 1]
+        observation_ = batch_memory[:, -length:]
 
         # input is all next observation
-        # q_eval_input_s_next, q_target_input_s_next = \
-        #     self.sess.run([self.q_eval_net_out, self.q_target_net_out], feed_dict={
-        #         self.eval_net_input: observation_.reshape((-1, self.n_stack, self.n_features, self.n_features)),
-        #         self.target_net_input: observation_.reshape((-1, self.n_stack, self.n_features, self.n_features))})
         q_target_input_s_next = self.sess.run(self.q_target_net_out, feed_dict={
             self.target_net_input: observation_.reshape((-1, self.n_stack, self.image_size, self.image_size))})
         # real q_eval, input is the current observation
@@ -75,12 +83,13 @@ class DeepQNetwork(BaseDQN):
         selected_q_next = np.max(q_target_input_s_next, axis=1)
         q_target[batch_index, eval_act_index] = reward + self.gamma * selected_q_next
 
-        _, cost = self.sess.run([self.train_op, self.loss], feed_dict={
+        _, abs_errors, cost = self.sess.run([self.train_op, self.abs_error, self.loss], feed_dict={
             self.eval_net_input: observation.reshape((-1, self.n_stack, self.image_size, self.image_size)),
-            self.q_target: q_target})
+            self.q_target: q_target,
+            self.ISWeights: ISWeights})
 
         # epsilon-decay
-        if incre_epsilon:
+        if episode_done:
             self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon < self.epsilon_max else self.epsilon_max
 
         if self.summary_flag:

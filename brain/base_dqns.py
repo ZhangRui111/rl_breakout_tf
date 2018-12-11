@@ -21,6 +21,7 @@ class SumTree(object):
         # [--------------Parent nodes-------------][-------leaves to recode priority-------]
         #             size: capacity - 1                       size: capacity
         self.data = np.zeros(capacity, dtype=object)  # for all transitions
+        self.full = False  # whether the reply pool is full.
         # [--------------data frame-------------]
         #             size: capacity
 
@@ -31,6 +32,7 @@ class SumTree(object):
         self.data[self.data_pointer] = data  # update data_frame
         self.data_pointer += 1
         if self.data_pointer >= self.capacity:  # replace when exceed the capacity
+            self.full = True
             self.data_pointer = 0
 
     def update(self, tree_idx, p):
@@ -38,6 +40,7 @@ class SumTree(object):
         self.tree[tree_idx] = p
         # then propagate the change through tree
         while tree_idx != 0:  # this method is faster than the recursive loop in the reference code
+            # tree_idx is original tree_idx's parent node. (cl_idx = 2 * parent_idx + 1, cr_idx = cl_idx + 1)
             tree_idx = (tree_idx - 1) // 2
             self.tree[tree_idx] += change
 
@@ -91,21 +94,31 @@ class Memory(object):  # stored as ( s, a, r, s_ ) in SumTree
         self.beta_increment_per_sampling = para.beta_increment_per_sampling
         self.abs_err_upper = para.abs_err_upper  # clipped abs error
 
-    def store(self, transition, filename, overwrite):
+    def store(self, transition):
         max_p = np.max(self.tree.tree[-self.tree.capacity:])
         if max_p == 0:
             max_p = self.abs_err_upper
         self.tree.add(max_p, transition)  # set the max p for new p
-        write_file(filename, '\nself.tree.tree: ' + str(self.tree.tree), overwrite)
-        write_file(filename, 'self.tree.data: \n' + str(self.tree.data))
 
-    def sample(self, n):
-        b_idx, b_memory, ISWeights = np.empty((n,), dtype=np.int32), \
-                                     np.empty((n, self.tree.data[0].size)), np.empty((n, 1))
+    def sample(self, n, incre_deta=False):
+        b_idx, b_memory, ISWeights = \
+            np.empty((n, 1), dtype=np.int32), np.empty((n, self.tree.data[0].size)), np.empty((n, 1))
         pri_seg = self.tree.total_p / n  # priority segment
-        self.beta = np.min([1., self.beta + self.beta_increment_per_sampling])  # beta_max = 1
 
-        min_prob = np.min(self.tree.tree[-self.tree.capacity:]) / self.tree.total_p  # for later calculate ISweight
+        if incre_deta is True:
+            self.beta = np.min([1., self.beta + self.beta_increment_per_sampling])  # beta_max = 1
+        else:
+            self.beta = np.min([1., self.beta])  # beta_max = 1
+        
+        if self.tree.full is True:
+            # for later calculate ISweight, what the leaf note store is ``(p_i)^\alpha'',
+            # so P(i) = (p_i)^\alpha / self.tree.total_p
+            min_prob = np.min(self.tree.tree[-self.tree.capacity:]) / self.tree.total_p
+        else:
+            start = self.tree.capacity - 1
+            end = self.tree.data_pointer + self.tree.capacity - 1
+            min_prob = np.min(self.tree.tree[start:end]) / self.tree.total_p
+
         for i in range(n):
             a, b = pri_seg * i, pri_seg * (i + 1)
             v = np.random.uniform(a, b)
@@ -120,20 +133,22 @@ class Memory(object):  # stored as ( s, a, r, s_ ) in SumTree
         return b_idx, b_memory, ISWeights
 
     def batch_update(self, tree_idx, abs_errors):
-        abs_errors += self.epsilon  # convert to abs and avoid 0
+        abs_errors += self.epsilon  # p_i = |\delta| + \epsilon, to avoid p_i is zero.
         clipped_errors = np.minimum(abs_errors, self.abs_err_upper)
+        # When calculate P(i), we will need (p_i)^\alpha, or in other way, (p_i)^\alpha is a linear measurement of
+        # its probability of being replayed. See P(i)'s formula in the paper.
         ps = np.power(clipped_errors, self.alpha)
         for ti, p in zip(tree_idx, ps):
             self.tree.update(ti, p)
 
 
 class MemoryParas(object):
-    def __init__(self, m_epsilon, m_alpha, m_bata, m_beta_incre, m_abs_err_upper):
-        self.epsilon = m_epsilon  # small amount to avoid zero priority
+    def __init__(self, m_nonzero_epsilon, m_alpha, m_initial_bata, m_final_bata, m_final_frame, m_abs_err_upper):
+        self.epsilon = m_nonzero_epsilon  # small amount to avoid zero priority
         self.alpha = m_alpha  # [0~1] convert the importance of TD error to priority
-        self.beta = m_bata  # importance-sampling, from initial value increasing to 1
-        self.beta_increment_per_sampling = m_beta_incre
-        self.abs_err_upper = m_abs_err_upper  # clipped abs error
+        self.beta = m_initial_bata  # importance-sampling, from initial value increasing to 1
+        self.beta_increment_per_sampling = (m_final_bata-m_initial_bata)/m_final_frame
+        self.abs_err_upper = m_abs_err_upper  # clipped abs error, usually is 1.
 
 
 class BaseDQN(object):
@@ -141,6 +156,7 @@ class BaseDQN(object):
                  network_build,
                  hp,
                  token,
+                 prioritized=False,
                  initial_epsilon=None,
                  finial_epsilon=None,
                  finial_epsilon_frame=None,
@@ -186,10 +202,10 @@ class BaseDQN(object):
             self.replace_target_iter = target_network_update_frequency
 
         self.n_actions = self.hp.N_ACTIONS
-        self.n_features = self.hp.N_FEATURES
         self.n_stack = self.hp.N_STACK
         self.image_size = self.hp.IMAGE_SIZE
         self.max_episode = self.hp.MAX_EPISODES
+        self.prioritized = prioritized
         self.flag = True  # output signal
         self.summary_flag = self.hp.OUTPUT_GRAPH  # tf.summary flag
 
@@ -206,10 +222,14 @@ class BaseDQN(object):
 
         # total learning step
         self.learn_step_counter = 0
-        self.image_size = self.hp.IMAGE_SIZE
 
         # initialize zero memory [s, a, r, s_]
-        self.memory = []
+        if self.prioritized:
+            memory_paras = MemoryParas(self.hp.M_NONZERO_EPSILON, self.hp.M_ALPHA, self.hp.M_INITIAL_BETA, self.hp.M_FINAL_BETA,
+                                       self.hp.M_FINAL_BETA_FRAME, self.hp.M_ABS_ERROR_UPPER)
+            self.memory = Memory(capacity=self.memory_size, para=memory_paras)
+        else:
+            self.memory = []
 
         # target network's soft_replacement
         with tf.variable_scope('soft_replacement'):
@@ -221,15 +241,14 @@ class BaseDQN(object):
         # self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=True))
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         self.sess.run(tf.global_variables_initializer())
+        self.graph_path = self.hp.LOGS_DATA_PATH + self.hp.model + '/' + self.token + '/'
 
         if self.summary_flag:
-            graph_path = self.hp.LOGS_DATA_PATH + self.hp.model + '/' + self.token + '/'
-            self.writer = tf.summary.FileWriter(graph_path, self.sess.graph)
+            self.writer = tf.summary.FileWriter(self.graph_path, self.sess.graph)
 
         # self.cost_his = []
 
     def preprocess_image(self, img):
-        # img = img / 255.0
         img = img[30:-15, 5:-5:, :]  # image cropping
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # convert from BGR to GRAY
         gray = cv2.resize(gray, (self.image_size, self.image_size), interpolation=cv2.INTER_NEAREST)

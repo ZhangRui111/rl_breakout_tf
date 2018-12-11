@@ -55,11 +55,6 @@ class DeepQNetwork(BaseDQN):
         reward = np.array(reward)
         observation_ = np.array(observation_)
 
-        # input is all next observation
-        # q_eval_input_s_next, q_target_input_s_next = \
-        #     self.sess.run([self.q_eval_net_out, self.q_target_net_out], feed_dict={
-        #         self.eval_net_input: observation_.reshape((-1, self.n_stack, self.n_features, self.n_features)),
-        #         self.target_net_input: observation_.reshape((-1, self.n_stack, self.n_features, self.n_features))})
         q_target_input_s_next = self.sess.run(self.q_target_net_out, feed_dict={
             self.target_net_input: observation_.reshape((-1, self.n_stack, self.image_size, self.image_size))})
         # real q_eval, input is the current observation
