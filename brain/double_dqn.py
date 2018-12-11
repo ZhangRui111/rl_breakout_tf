@@ -56,12 +56,10 @@ class DeepQNetwork(BaseDQN):
         observation_ = np.array(observation_)
 
         # input is all next observation
-        # q_eval_input_s_next, q_target_input_s_next = \
-        #     self.sess.run([self.q_eval_net_out, self.q_target_net_out], feed_dict={
-        #         self.eval_net_input: observation_.reshape((-1, self.n_stack, self.n_features, self.n_features)),
-        #         self.target_net_input: observation_.reshape((-1, self.n_stack, self.n_features, self.n_features))})
-        q_target_input_s_next = self.sess.run(self.q_target_net_out, feed_dict={
-            self.target_net_input: observation_.reshape((-1, self.n_stack, self.image_size, self.image_size))})
+        q_eval_input_s_next, q_target_input_s_next = \
+            self.sess.run([self.q_eval_net_out, self.q_target_net_out], feed_dict={
+                self.eval_net_input: observation_.reshape((-1, self.n_stack, self.image_size, self.image_size)),
+                self.target_net_input: observation_.reshape((-1, self.n_stack, self.image_size, self.image_size))})
         # real q_eval, input is the current observation
         q_eval_input_s = self.sess.run(self.q_eval_net_out, feed_dict={
             self.eval_net_input: observation.reshape((-1, self.n_stack, self.image_size, self.image_size))})
@@ -72,7 +70,8 @@ class DeepQNetwork(BaseDQN):
         # q target
         q_target = q_eval_input_s.copy()
         batch_index = np.arange(self.batch_size, dtype=np.int32)
-        selected_q_next = np.max(q_target_input_s_next, axis=1)
+        max_act_next = np.argmax(q_eval_input_s_next, axis=1)
+        selected_q_next = q_target_input_s_next[batch_index, max_act_next]
         q_target[batch_index, eval_act_index] = reward + self.gamma * selected_q_next
 
         _, cost = self.sess.run([self.train_op, self.loss], feed_dict={

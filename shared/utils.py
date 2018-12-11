@@ -3,6 +3,7 @@ import errno
 import os
 import csv
 import shutil
+import tensorflow as tf
 
 
 def binary_array_to_int(array, size):
@@ -63,48 +64,27 @@ def read_file(path):
     return data
 
 
-def write_csv_file(path, data, overwrite=False):
-    """ write data to csv file.
-    :param path:
-    :param data: list
-    :param overwrite: open file by 'w' (True) or 'a' (False)
-    :return:
+def write_ndarray(path, data):
+    """ write ndarray to csv file.
     """
-    # Check the file path.
+    # Write data.
     if not os.path.exists(os.path.dirname(path)):
         try:
             os.makedirs(os.path.dirname(path))
+            np.savetxt(path, data)
         except OSError as exc:  # Guard against race condition
             if exc.errno != errno.EEXIST:
                 raise
-    # Write data.
-    if overwrite is True:
-        with open(path, 'w', newline='') as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(data)
     else:
-        with open(path, 'a', newline='') as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(data)
+        old_array = np.loadtxt(path)
+        new_array = np.concatenate((old_array, data))
+        np.savetxt(path, new_array)
 
 
-def read_csv_file_to_int(path):
-    """ read data from csv file.
-    :param path:
-    :return: One element is one row.
+def read_ndarray(path):
+    """ read ndarray from file.
     """
-    list_rows = []
-    with open(path, encoding='utf-8') as fo:
-        csv_reader = csv.reader(fo)
-        for row in csv_reader:
-            list_rows.append(row)
-    rows = len(list_rows)
-    all_data = list_rows[0]
-    for i in range(rows):
-        all_data += list_rows[i]
-    for j in range((len(all_data))):
-        all_data[j] = int(all_data[j])
-    return all_data
+    return np.loadtxt(path)
 
 
 def copy_rename_folder(oldpath, newpath, new_name):
@@ -123,3 +103,31 @@ def copy_rename_folder(oldpath, newpath, new_name):
             print('Warning: old path is not valid!')
             if exc.errno != errno.EEXIST:
                 raise
+
+
+def restore_parameters(sess, restore_path):
+    """ Save and restore Network's weights.
+    """
+    saver = tf.train.Saver(max_to_keep=5)
+    checkpoint = tf.train.get_checkpoint_state(restore_path)
+    if checkpoint and checkpoint.model_checkpoint_path:
+        saver.restore(sess, checkpoint.model_checkpoint_path)
+        print("Successfully loaded:", checkpoint.model_checkpoint_path)
+        path_ = checkpoint.model_checkpoint_path
+        step = int((path_.split('-'))[-1])
+    else:
+        # Re-train the network from zero.
+        print("Could not find old network weights")
+        step = 0
+    return saver, step
+
+
+def save_parameters(sess, save_path, saver, name):
+    if not os.path.exists(os.path.dirname(save_path)):
+        try:
+            os.makedirs(os.path.dirname(save_path))
+        except OSError as exc:  # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
+    saver.save(sess, name)
+    my_print('save weights', '-')
