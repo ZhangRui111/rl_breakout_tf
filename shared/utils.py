@@ -48,11 +48,11 @@ def write_file(path, content, overwrite=False):
     # Write data.
     if overwrite is True:
         with open(path, 'w') as fo:
-            fo.write(content)
+            fo.write(str(content))
             fo.close()
     else:
         with open(path, 'a') as fo:
-            fo.write(content + '\n')
+            fo.write(str(content) + '\n')
             fo.close()
 
 
@@ -158,6 +158,8 @@ def read_output_plot(path, savepath, if_close_figure):
             data_plot.append(np.mean(segment))
         x_axis_data = np.arange(0, 50000, interval)
 
+        write_file(savepath + 'data.txt', data_plot, True)
+
         plt.plot(x_axis_data, np.asarray(data_plot), label=path.split('/')[-2])
         plt.title(path)
         plt.xlabel('episodes')
@@ -167,15 +169,15 @@ def read_output_plot(path, savepath, if_close_figure):
         for items in y_axis_ticks:
             plt.hlines(items, x_axis_data.min(), x_axis_data.max(), colors="#D3D3D3", linestyles="dashed")
         plt.legend(loc='best')
-        plt.savefig(savepath)
+        plt.savefig(savepath + 'data.png')
         if if_close_figure is True:
             plt.close()  # if not close figure, then all plot will be drawn in the same figure.
         # plt.show()
 
 
 def main():
-    for ind in [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 101]:
-        read_output_plot('../logs/' + str(ind) + '/data', '../logs/' + str(ind) + '/data.png', False)
+    for ind in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 101]:
+        read_output_plot('../logs/' + str(ind) + '/data', '../logs/' + str(ind) + '/', False)
     # read_output_plot('../logs/11/data', '../logs/11/data.png')
 
 

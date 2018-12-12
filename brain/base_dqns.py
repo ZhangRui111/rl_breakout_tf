@@ -2,8 +2,6 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-from shared.utils import write_file
-
 # Clears the default graph stack and resets the global default graph.
 # tf.reset_default_graph()
 
