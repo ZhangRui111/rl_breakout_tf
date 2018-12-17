@@ -162,7 +162,8 @@ class BaseDQN(object):
                  minibatch_size=None,
                  reply_start=None,
                  reply_memory_size=None,
-                 target_network_update_frequency=None):
+                 target_network_update_frequency=None,
+                 output_graph=None):
 
         self.hp = hp
         self.token = token
@@ -198,6 +199,10 @@ class BaseDQN(object):
             self.replace_target_iter = self.hp.TARGET_NETWORK_UPDATE_FREQUENCY
         else:
             self.replace_target_iter = target_network_update_frequency
+        if output_graph is None:
+            self.summary_flag = self.hp.OUTPUT_GRAPH
+        else:
+            self.summary_flag = output_graph
 
         self.n_actions = self.hp.N_ACTIONS
         self.n_stack = self.hp.N_STACK
@@ -205,7 +210,6 @@ class BaseDQN(object):
         self.max_episode = self.hp.MAX_EPISODES
         self.prioritized = prioritized
         self.flag = True  # output signal
-        self.summary_flag = self.hp.OUTPUT_GRAPH  # tf.summary flag
 
         # network input/output
         self.eval_net_input = network_build[0][0]

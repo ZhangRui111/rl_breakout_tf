@@ -10,7 +10,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 
-def train_model(brain):
+def train_model(brain, if_REINFORCE=False):
     env = gym.make('Breakout-v0')
     # env = env.unwrapped
     # print(env.action_space)
@@ -43,21 +43,29 @@ def train_model(brain):
             ep_reward += reward
             num_step += 1
 
-            if i_episode > brain.replay_start:
+            if not if_REINFORCE and i_episode > brain.replay_start:
                 brain.learn(done)
 
             if done:
-                print('episode: ', i_episode, ' | reward: ', ep_reward, 'num_step: ', num_step, ' | total_step: ',
-                      total_steps, 'epsilon', brain.epsilon, 'episode_time', time.time() - start_time)
-                # save the log info.
-                data_list = np.concatenate(
-                    (data_list,
-                     np.array([i_episode, ep_reward, num_step, total_steps, brain.epsilon, time.time() - start_time]).reshape((1, 6))))
-                if data_list.shape[0] % brain.hp.OUTPUT_SAVER_ITER == 0:
-                    write_ndarray(brain.graph_path + 'data', np.array(data_list))
-                    data_list = data_list[-1, :].reshape(1, 6)
-                if i_episode % brain.hp.WEIGHTS_SAVER_ITER == 0 and i_episode != 0:
-                    save_parameters(brain.sess, brain.graph_path, saver, brain.graph_path + '-' + str(load_episode + i_episode))
+                if if_REINFORCE:
+                    brain.learn()
+                    print('episode: ', i_episode, ' | reward: ', ep_reward, 'num_step: ', num_step, ' | total_step: ',
+                          total_steps, 'episode_time', time.time() - start_time)
+
+                if not if_REINFORCE:
+                    print('episode: ', i_episode, ' | reward: ', ep_reward, 'num_step: ', num_step, ' | total_step: ',
+                          total_steps, 'epsilon', brain.epsilon, 'episode_time', time.time() - start_time)
+                    # save the log info.
+                    data_list = np.concatenate(
+                        (data_list,
+                         np.array([i_episode, ep_reward, num_step, total_steps, brain.epsilon,
+                                   time.time() - start_time]).reshape((1, 6))))
+                    if data_list.shape[0] % brain.hp.OUTPUT_SAVER_ITER == 0:
+                        write_ndarray(brain.graph_path + 'data', np.array(data_list))
+                        data_list = data_list[-1, :].reshape(1, 6)
+                    if i_episode % brain.hp.WEIGHTS_SAVER_ITER == 0 and i_episode != 0:
+                        save_parameters(brain.sess, brain.graph_path, saver,
+                                        brain.graph_path + '-' + str(load_episode + i_episode))
                 break
 
             state = next_state
@@ -74,9 +82,10 @@ def main():
 
     tf.reset_default_graph()
     # #choose model
-    model = 'pri_dqn'
+    model = 'REINFORCE'
 
     if model == 'double_dqn':
+        print('double_dqn')
         from brain.double_dqn import DeepQNetwork
         from network.network_double_dqn import build_network
         from hyper_paras.hp_double_dqn import Hyperparameters
@@ -87,6 +96,7 @@ def main():
         brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
         train_model(brain)
     elif model == 'dueling_dqn':
+        print('dueling_dqn')
         from brain.dueling_dqn import DeepQNetwork
         from network.network_dueling_dqn import build_network
         from hyper_paras.hp_dueling_dqn import Hyperparameters
@@ -97,6 +107,7 @@ def main():
         brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
         train_model(brain)
     elif model == 'pri_dqn':
+        print('pri_dqn')
         from brain.pri_dqn import DeepQNetwork
         from network.network_pri_dqn import build_network
         from hyper_paras.hp_pri_dqn import Hyperparameters
@@ -106,6 +117,17 @@ def main():
         token = 'token'  # token is useful when para-adjusting
         brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
         train_model(brain)
+    elif model == 'REINFORCE':
+        print('REINFORCE')
+        from brain.REINFORCE import REINFORCE
+        from network.network_REINFORCE import build_network
+        from hyper_paras.hp_REINFORCE import Hyperparameters
+
+        hp = Hyperparameters()
+        bn = build_network()
+        token = 'token'  # token is useful when para-adjusting
+        brain = REINFORCE(network_build=bn, hp=hp, token=token)
+        train_model(brain, True)
     else:
         print('No model satisfied, try dqn_2015!')
         from brain.dqn_2015 import DeepQNetwork
