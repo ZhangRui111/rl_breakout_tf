@@ -151,9 +151,9 @@ class MemoryParas(object):
 
 class BaseDQN(object):
     def __init__(self,
-                 network_build,
                  hp,
                  token,
+                 network_build=None,
                  prioritized=False,
                  initial_epsilon=None,
                  finial_epsilon=None,
@@ -212,15 +212,16 @@ class BaseDQN(object):
         self.flag = True  # output signal
 
         # network input/output
-        self.eval_net_input = network_build[0][0]
-        self.target_net_input = network_build[0][1]
-        self.q_target = network_build[0][2]
-        self.q_eval_net_out = network_build[1][0]
-        self.loss = network_build[1][1]
-        self.q_target_net_out = network_build[1][2]
-        self.e_params = network_build[2][0]
-        self.t_params = network_build[2][1]
-        self.train_op = network_build[2][2]
+        if network_build is not None:
+            self.eval_net_input = network_build[0][0]
+            self.target_net_input = network_build[0][1]
+            self.q_target = network_build[0][2]
+            self.q_eval_net_out = network_build[1][0]
+            self.loss = network_build[1][1]
+            self.q_target_net_out = network_build[1][2]
+            self.e_params = network_build[2][0]
+            self.t_params = network_build[2][1]
+            self.train_op = network_build[2][2]
 
         # total learning step
         self.learn_step_counter = 0
@@ -234,8 +235,9 @@ class BaseDQN(object):
             self.memory = []
 
         # target network's soft_replacement
-        with tf.variable_scope('soft_replacement'):
-            self.target_replace_op = [tf.assign(t, e) for t, e in zip(self.t_params, self.e_params)]
+        if hasattr(self, 't_params'):
+            with tf.variable_scope('soft_replacement'):
+                self.target_replace_op = [tf.assign(t, e) for t, e in zip(self.t_params, self.e_params)]
 
         # start a session
         gpu_options = tf.GPUOptions(allow_growth=True)

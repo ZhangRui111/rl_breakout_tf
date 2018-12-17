@@ -12,8 +12,8 @@ class Hyperparameters():
         self.DISCOUNT_FACTOR = 0.99
 
         # log and output
-        self.WEIGHTS_SAVER_ITER = 2000  # 2000 : 200
-        self.OUTPUT_SAVER_ITER = 1000  # 1000 : 100
+        self.WEIGHTS_SAVER_ITER = 4000  # 4000 : 200
+        self.OUTPUT_SAVER_ITER = 2000  # 2000 : 100
         self.OUTPUT_GRAPH = False
         self.SAVED_NETWORK_PATH = './logs/network/'
         self.LOGS_DATA_PATH = './logs/data/'

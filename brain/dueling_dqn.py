@@ -11,9 +11,9 @@ from shared.utils import my_print
 
 class DeepQNetwork(BaseDQN):
     def __init__(self,
-                 network_build,
                  hp,
                  token,
+                 network_build,
                  prioritized=False,
                  initial_epsilon=None,
                  finial_epsilon=None,
@@ -23,9 +23,9 @@ class DeepQNetwork(BaseDQN):
                  reply_start=None,
                  reply_memory_size=None,
                  target_network_update_frequency=None):
-        super().__init__(network_build,
-                         hp,
+        super().__init__(hp,
                          token,
+                         network_build,
                          prioritized,
                          initial_epsilon,
                          finial_epsilon,

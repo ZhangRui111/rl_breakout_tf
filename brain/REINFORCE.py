@@ -88,6 +88,7 @@ class REINFORCE:
             discounted_ep_rs[t] = running_add
 
         # normalize episode rewards
+        # This way we’re always encouraging and discouraging roughly half of the performed actions.
         mean = np.mean(discounted_ep_rs)
         std = np.std(discounted_ep_rs) + 1E-6
         discounted_ep_rs = (discounted_ep_rs-mean)/std

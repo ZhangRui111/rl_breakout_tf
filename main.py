@@ -10,7 +10,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 
-def train_model(brain, if_REINFORCE=False):
+def train_model(brain, if_REINFORCE=False, if_a2c=False):
     env = gym.make('Breakout-v0')
     # env = env.unwrapped
     # print(env.action_space)
@@ -42,17 +42,23 @@ def train_model(brain, if_REINFORCE=False):
 
             ep_reward += reward
             num_step += 1
+            state = next_state
+            total_steps += 1
 
-            if not if_REINFORCE and i_episode > brain.replay_start:
+            if if_REINFORCE is False and i_episode > brain.replay_start:
                 brain.learn(done)
 
             if done:
-                if if_REINFORCE:
+                if if_REINFORCE is True:
                     brain.learn()
                     print('episode: ', i_episode, ' | reward: ', ep_reward, 'num_step: ', num_step, ' | total_step: ',
                           total_steps, 'episode_time', time.time() - start_time)
 
-                if not if_REINFORCE:
+                if if_a2c is True:
+                    print('episode: ', i_episode, ' | reward: ', ep_reward, 'num_step: ', num_step, ' | total_step: ',
+                          total_steps, 'episode_time', time.time() - start_time)
+
+                if if_REINFORCE is False and if_a2c is False:
                     print('episode: ', i_episode, ' | reward: ', ep_reward, 'num_step: ', num_step, ' | total_step: ',
                           total_steps, 'epsilon', brain.epsilon, 'episode_time', time.time() - start_time)
                     # save the log info.
@@ -68,9 +74,6 @@ def train_model(brain, if_REINFORCE=False):
                                         brain.graph_path + '-' + str(load_episode + i_episode))
                 break
 
-            state = next_state
-            total_steps += 1
-
 
 def main():
     # #parameters adjusting.
@@ -82,7 +85,7 @@ def main():
 
     tf.reset_default_graph()
     # #choose model
-    model = 'REINFORCE'
+    model = 'a2c'
 
     if model == 'double_dqn':
         print('double_dqn')
@@ -92,8 +95,8 @@ def main():
 
         hp = Hyperparameters()
         bn = build_network()
-        token = 'token'  # token is useful when para-adjusting
-        brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
+        token = 'double_dqn'  # token is useful when para-adjusting (tick different folder)
+        brain = DeepQNetwork(hp=hp, token=token, network_build=bn)
         train_model(brain)
     elif model == 'dueling_dqn':
         print('dueling_dqn')
@@ -103,8 +106,8 @@ def main():
 
         hp = Hyperparameters()
         bn = build_network()
-        token = 'token'  # token is useful when para-adjusting
-        brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
+        token = 'dueling_dqn'  # token is useful when para-adjusting (tick different folder)
+        brain = DeepQNetwork(hp=hp, token=token, network_build=bn)
         train_model(brain)
     elif model == 'pri_dqn':
         print('pri_dqn')
@@ -114,8 +117,8 @@ def main():
 
         hp = Hyperparameters()
         bn = build_network()
-        token = 'token'  # token is useful when para-adjusting
-        brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
+        token = 'pri_dqn'  # token is useful when para-adjusting (tick different folder)
+        brain = DeepQNetwork(hp=hp, token=token, network_build=bn)
         train_model(brain)
     elif model == 'REINFORCE':
         print('REINFORCE')
@@ -125,9 +128,21 @@ def main():
 
         hp = Hyperparameters()
         bn = build_network()
-        token = 'token'  # token is useful when para-adjusting
-        brain = REINFORCE(network_build=bn, hp=hp, token=token)
-        train_model(brain, True)
+        token = 'REINFORCE'  # token is useful when para-adjusting (tick different folder)
+        brain = REINFORCE(hp=hp, token=token, network_build=bn)
+        train_model(brain, if_REINFORCE=True)
+    elif model == 'a2c':
+        print('a2c')
+        from brain.a2c import A2C
+        from network.network_a2c import build_actor_network, build_critic_network
+        from hyper_paras.hp_a2c import Hyperparameters
+
+        hp = Hyperparameters()
+        actor_bn = build_actor_network()
+        critic_bn = build_critic_network()
+        token = 'a2c'  # token is useful when para-adjusting
+        brain = A2C(hp=hp, token=token, network_actor=actor_bn, network_critic=critic_bn)
+        train_model(brain, if_a2c=True)
     else:
         print('No model satisfied, try dqn_2015!')
         from brain.dqn_2015 import DeepQNetwork
@@ -136,8 +151,8 @@ def main():
 
         hp = Hyperparameters()
         bn = build_network()
-        token = 'token'  # token is useful when para-adjusting
-        brain = DeepQNetwork(network_build=bn, hp=hp, token=token)
+        token = 'dqn_2015'  # token is useful when para-adjusting
+        brain = DeepQNetwork(hp=hp, token=token, network_build=bn)
         train_model(brain)
 
 
