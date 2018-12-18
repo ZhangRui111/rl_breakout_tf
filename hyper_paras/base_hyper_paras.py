@@ -12,8 +12,8 @@ class BaseHyperparameters(object):
         self.N_STACK = 4
         self.model = 'null'
 
-        self.MAX_EPISODES = 50000  # 50000 : 500
-        self.LEARNING_RATE = 0.0001
+        self.MAX_EPISODES = 50001  # 50001 : 500
+        self.LEARNING_RATE = 0.00001
         self.INITIAL_EXPLOR = 0  # 0 : 0.5
         self.FINAL_EXPLOR = 0.9
         self.FINAL_EXPLOR_FRAME = 45000  # 45000 : 450
@@ -21,12 +21,12 @@ class BaseHyperparameters(object):
         self.MINIBATCH_SIZE = 32  # 32 : 8
         self.REPLY_START_SIZE = 400  # 400 : 100
         self.REPLY_MEMORY_SIZE = 200000
-        self.TARGET_NETWORK_UPDATE_FREQUENCY = 10000  # 10000 : 150
+        self.TARGET_NETWORK_UPDATE_FREQUENCY = 50000  # 50000 : 150
 
         # log and output
-        self.WEIGHTS_SAVER_ITER = 2000  # 2000 : 200
-        self.OUTPUT_SAVER_ITER = 1000  # 1000 : 100
-        self.OUTPUT_GRAPH = True
+        self.WEIGHTS_SAVER_ITER = 4000  # 4000 : 200
+        self.OUTPUT_SAVER_ITER = 2000  # 2000 : 100
+        self.OUTPUT_GRAPH = False
         self.SAVED_NETWORK_PATH = './logs/network/'
         self.LOGS_DATA_PATH = './logs/data/'
         self.SAVED_NETWORK_PATH_BACK = './backup/network/'
