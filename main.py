@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 import time
 
-from shared.utils import restore_parameters, save_parameters, write_ndarray, read_ndarray, my_print
+from shared.utils import restore_parameters, save_parameters, write_ndarray, read_ndarray, write_file
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -24,6 +24,8 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
 
     # train for numbers of episodes
     total_steps = 0
+    probs_list = []
+    write_file(brain.graph_path + 'probs', 'probs_list\n', True)
     for i_episode in range(brain.max_episode):
 
         observation = env.reset()
@@ -36,10 +38,13 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
 
         while True:
             # env.render()
-            if if_a2c is True or if_REINFORCE is True:
+            if if_a2c is True:
+                action, probs = brain.actor.choose_action(state)
+            elif if_REINFORCE is True:
                 action, probs = brain.choose_action(state)
             else:
                 action = brain.choose_action(state)
+
             observation_, reward, done, info = env.step(action)
             observation_ = brain.preprocess_image(observation_)
             next_state = np.concatenate([state[1:], np.expand_dims(observation_, 0)], axis=0)
@@ -55,30 +60,40 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
                 brain.learn(done)
 
             if done:
-                if if_REINFORCE is True or if_a2c is True:
-                    if if_REINFORCE is True:
-                        brain.learn()
 
-                    print('episode: ', i_episode, ' | reward: ', ep_reward, 'num_step: ', num_step, ' | total_step: ',
-                          total_steps, 'probs', probs, 'episode_time', time.time() - start_time)
-                    # save the log info.
-                    data_list = np.concatenate(
-                        (data_list,
-                         np.array([i_episode, ep_reward, num_step, total_steps, probs,
-                                   time.time() - start_time]).reshape((1, 6))))
+                if if_REINFORCE is True:
+                    brain.learn()
+                # Logs issues, i.e., save the log info.
+                record_num = 6
+
+                if if_REINFORCE is True or if_a2c is True:
+                    record_num = 5
+
+                    print('episode: ', i_episode, ' | reward: ', ep_reward, 'probs', probs,
+                          'episode_time', time.time() - start_time)
+
+                    probs_list.append(probs)
+                    if len(probs_list) % brain.hp.OUTPUT_SAVER_ITER == 0:
+                        write_file(brain.graph_path + 'probs', probs_list, False)
+                        probs_list = []
+
+                    new_data = np.array([i_episode, ep_reward, num_step, total_steps,
+                                         time.time() - start_time]).reshape((1, record_num))
+                    data_list = np.concatenate((data_list, new_data))
 
                 if if_REINFORCE is False and if_a2c is False:
-                    print('episode: ', i_episode, ' | reward: ', ep_reward, 'num_step: ', num_step, ' | total_step: ',
-                          total_steps, 'epsilon', brain.epsilon, 'episode_time', time.time() - start_time)
-                    # save the log info.
-                    data_list = np.concatenate(
-                        (data_list,
-                         np.array([i_episode, ep_reward, num_step, total_steps, brain.epsilon,
-                                   time.time() - start_time]).reshape((1, 6))))
+                    # record_num = 6
+
+                    print('episode: ', i_episode, ' | reward: ', ep_reward, 'epsilon', brain.epsilon,
+                          'episode_time', time.time() - start_time)
+
+                    new_data = np.array([i_episode, ep_reward, num_step, total_steps, brain.epsilon,
+                                         time.time() - start_time]).reshape((1, record_num))
+                    data_list = np.concatenate((data_list, new_data))
 
                 if data_list.shape[0] % brain.hp.OUTPUT_SAVER_ITER == 0:
                     write_ndarray(brain.graph_path + 'data', np.array(data_list))
-                    data_list = data_list[-1, :].reshape(1, 6)
+                    data_list = data_list[-1, :].reshape(1, record_num)
                 if i_episode % brain.hp.WEIGHTS_SAVER_ITER == 0 and i_episode != 0:
                     save_parameters(brain.sess, brain.graph_path, saver,
                                     brain.graph_path + '-' + str(load_episode + i_episode))

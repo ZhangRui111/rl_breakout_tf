@@ -33,8 +33,9 @@ class Actor(object):
 
         return exp_v
 
-    def choose_action(self, s):
-        probs = self.sess.run(self.acts_prob, {self.state: s})  # get probabilities for all actions
+    def choose_action(self, observation):
+        probs = self.sess.run(self.acts_prob,
+                              {self.state: observation[np.newaxis, :]})  # get probabilities for all actions
         select_action = np.random.choice(np.arange(probs.shape[1]), p=probs.ravel())
         return select_action, probs  # return a int
 
@@ -46,20 +47,27 @@ class Critic(object):
 
         # input placeholder
         self.state = network[0][0]
-        self.next_value = network[0][1]
-        self.reward = network[0][2]
+        self.action = network[0][1]
+        self.target_value = network[0][2]
         # output
         self.value = network[1][0]
         self.td_error = network[1][1]
         self.loss = network[1][2]
         self.train_op = network[1][3]
 
-    def learn(self, s, r, s_):
-        v_ = self.sess.run(self.value, {self.state: s_})
+    def learn(self, s, r, s_, a):
+        v = self.sess.run(self.value, feed_dict={self.state: s})
+        v_ = self.sess.run(self.value, feed_dict={self.state: s_})
+
+        target_v_ = v.copy()
+        batch_index = np.arange(self.hp.MINIBATCH_SIZE, dtype=np.int32)
+        selected_q_next = r + self.hp.DISCOUNT_FACTOR * np.max(v_, axis=1)
+        target_v_[batch_index, a] = selected_q_next
+
         td_error, _ = self.sess.run([self.td_error, self.train_op],
                                     feed_dict={self.state: s,
-                                               self.next_value: v_.reshape(-1),
-                                               self.reward: r.reshape(-1)})
+                                               self.action: a.reshape(-1),
+                                               self.target_value: target_v_})
         if np.sum(np.isnan(td_error)) >= 1:
             print('nan: {}'.format(np.sum(np.isnan(td_error))))
             raise Exception("nan error")
@@ -113,8 +121,8 @@ class A2C(BaseDQN):
         reward = np.array(reward)
         observation_ = np.array(observation_)
 
-        td_error = self.critic.learn(observation, reward, observation_)  # gradient = grad[r + gamma * V(s_) - V(s)]
-        self.actor.learn(observation, action, td_error)  # true_gradient = grad[logPi(s,a) * td_error]
+        td_error = self.critic.learn(observation, reward, observation_, action)
+        self.actor.learn(observation, action, td_error)
 
     def preprocess_image(self, img):
         img = img[30:-15, 5:-5:, :]  # image cropping

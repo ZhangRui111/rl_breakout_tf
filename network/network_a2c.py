@@ -65,8 +65,10 @@ def build_critic_network(lr=None, n_stack=None, image_size=None, n_actions=None)
         n_actions = hp.N_ACTIONS
 
     state = tf.placeholder(tf.float32, [None, n_stack, image_size, image_size], 'state_'+flag)
-    next_value = tf.placeholder(tf.float32, [None, ], 'v_next_'+flag)
-    reward = tf.placeholder(tf.float32, [None, ], 'r_'+flag)
+    action = tf.placeholder(tf.int32, [None, ], 'act_' + flag)
+    target_value = tf.placeholder(tf.float32, [None, n_actions], 'target_v_' + flag)
+    # next_value = tf.placeholder(tf.float32, [None, ], 'v_next_' + flag)
+    # reward = tf.placeholder(tf.float32, [None, ], 'r_'+flag)
 
     with tf.variable_scope('Critic_'+flag):
         input_crop = state / 255
@@ -81,15 +83,19 @@ def build_critic_network(lr=None, n_stack=None, image_size=None, n_actions=None)
 
         flat = tf.contrib.layers.flatten(conv3)
         f = tf.contrib.layers.fully_connected(flat, 512)
-        value = tf.contrib.layers.fully_connected(f, 1)
+        value = tf.contrib.layers.fully_connected(f, n_actions)
 
     with tf.variable_scope('squared_TD_error_'+flag):
-        td_error = reward + hp.DISCOUNT_FACTOR * next_value - tf.reshape(value, [-1])  # TD_error = (r+gamma*V_next) - V_eval
-        loss = tf.square(td_error)
+        # eval_value = tf.reduce_sum(value * tf.one_hot(action, n_actions), axis=1)
+        # target_value = reward + hp.DISCOUNT_FACTOR * next_value
+        # td_error = target_value - eval_value  # td_error shape (?,)
+        # loss = tf.square(td_error)  # loss shape (?,)
+        td_error = tf.reduce_sum(tf.subtract(value, target_value), axis=1)
+        loss = tf.reduce_mean(tf.squared_difference(value, target_value))
     with tf.variable_scope('train_'+flag):
-        train_op = tf.train.AdamOptimizer(lr).minimize(loss)
+        train_op = tf.train.RMSPropOptimizer(lr).minimize(loss)
 
-    return [[state, next_value, reward],
+    return [[state, action, target_value],
             [value, td_error, loss, train_op]]
 
 

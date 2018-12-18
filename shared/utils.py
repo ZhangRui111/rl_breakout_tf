@@ -58,12 +58,12 @@ def write_file(path, content, overwrite=False):
 
 def read_file(path):
     # Check the file path.
-    if os.path.exists(os.path.dirname(path)):
+    if os.path.exists(path) is True:
         with open(path, 'r') as fo:
             data = fo.read()
             fo.close()
     else:
-        data = 'NONE'
+        data = None
     return data
 
 
@@ -74,20 +74,26 @@ def write_ndarray(path, data):
     if not os.path.exists(os.path.dirname(path)):
         try:
             os.makedirs(os.path.dirname(path))
-            np.savetxt(path, data)
         except OSError as exc:  # Guard against race condition
             if exc.errno != errno.EEXIST:
                 raise
     else:
-        old_array = np.loadtxt(path)
-        new_array = np.concatenate((old_array, data))
-        np.savetxt(path, new_array)
+        if os.path.exists(path) is True:
+            old_array = np.loadtxt(path)
+            new_array = np.concatenate((old_array, data))
+            np.savetxt(path, new_array)
+        else:
+            np.savetxt(path, data)
 
 
 def read_ndarray(path):
     """ read ndarray from file.
     """
-    return np.loadtxt(path)
+    if os.path.exists(path) is True:
+        data = np.loadtxt(path)
+    else:
+        data = None
+    return data
 
 
 def copy_rename_folder(oldpath, newpath, new_name):
