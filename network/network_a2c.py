@@ -43,7 +43,7 @@ def build_actor_network(lr=None, n_stack=None, image_size=None, n_actions=None):
         exp_v = tf.reduce_mean(log_prob * td_error)  # advantage (TD_error) guided loss
 
     with tf.variable_scope('train_'+flag):
-        train_op = tf.train.AdamOptimizer(lr).minimize(exp_v)  # minimize(-exp_v) = maximize(exp_v)
+        train_op = tf.train.RMSPropOptimizer(lr).minimize(exp_v)  # minimize(-exp_v) = maximize(exp_v)
 
     return [[state, action, td_error],
             [acts_prob, exp_v, train_op]]

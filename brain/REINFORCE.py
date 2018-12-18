@@ -57,7 +57,7 @@ class REINFORCE:
     def choose_action(self, observation):
         prob_weights = self.sess.run(self.all_act_prob, feed_dict={self.tf_observation: observation[np.newaxis, :]})
         action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())  # select action w.r.t the actions prob
-        return action
+        return action, prob_weights
 
     def store_transition(self, s, a, r, s_):
         self.ep_obs.append(s)

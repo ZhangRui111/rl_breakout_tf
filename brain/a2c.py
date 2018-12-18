@@ -12,9 +12,11 @@ class Actor(object):
         self.sess = sess
         self.hp = Hyperparameters()
 
+        # input placeholder
         self.state = network[0][0]
         self.action = network[0][1]
         self.td_error = network[0][2]
+        # output
         self.acts_prob = network[1][0]
         self.exp_v = network[1][1]
         self.train_op = network[1][2]
@@ -24,6 +26,7 @@ class Actor(object):
                                  feed_dict={self.state: s,
                                             self.action: a.reshape(-1),
                                             self.td_error: td.reshape(-1)})
+        # *.reshape(-1) is necessary, or cannot feed (32, 1) to placeholder which has shape (32,)
         if math.isnan(exp_v) is True:
             print('nan for exp_v')
             raise Exception("nan error exp_v")
@@ -33,7 +36,7 @@ class Actor(object):
     def choose_action(self, s):
         probs = self.sess.run(self.acts_prob, {self.state: s})  # get probabilities for all actions
         select_action = np.random.choice(np.arange(probs.shape[1]), p=probs.ravel())
-        return select_action  # return a int
+        return select_action, probs  # return a int
 
 
 class Critic(object):
@@ -41,9 +44,11 @@ class Critic(object):
         self.sess = sess
         self.hp = Hyperparameters()
 
+        # input placeholder
         self.state = network[0][0]
         self.next_value = network[0][1]
         self.reward = network[0][2]
+        # output
         self.value = network[1][0]
         self.td_error = network[1][1]
         self.loss = network[1][2]
@@ -79,7 +84,7 @@ class A2C(BaseDQN):
                  target_network_update_frequency=None):
         super().__init__(hp,
                          token,
-                         None,
+                         None,  # network_build=None
                          prioritized,
                          initial_epsilon,
                          finial_epsilon,
