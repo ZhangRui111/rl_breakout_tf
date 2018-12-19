@@ -151,7 +151,8 @@ def read_output_plot(path, savepath, if_close_figure):
             data_list[i] = float(data_list[i].split()[1])
 
         # assert str not in [type(i) for i in data_list]
-        data_list.pop()  # data_list[-1] is '', so we need to pop it out.
+        if type(data_list[-1]) is not float:
+            data_list.pop()  # data_list[-1] is '', so we need to pop it out.
         data = np.array(data_list)[:50000].astype(int)
 
         data_plot = []
@@ -165,13 +166,17 @@ def read_output_plot(path, savepath, if_close_figure):
         x_axis_data = np.arange(0, 50000, interval)
 
         write_file(savepath + 'data.txt', data_plot, True)
+        write_file(savepath + 'data.txt', max(data_plot), False)
 
         plt.plot(x_axis_data, np.asarray(data_plot), label=path.split('/')[-2])
         plt.title(path)
         plt.xlabel('episodes')
         plt.ylabel('rewards')
-        y_axis_ticks = [0, 10, 20, 30, 40, 50]
+        x_axis_ticks = [0, 10000, 20000, 30000, 40000, 50000]
+        y_axis_ticks = [0, 10, 20, 30, 40, 50, 60]
         plt.yticks(y_axis_ticks)
+        for items in x_axis_ticks:
+            plt.vlines(items, min(y_axis_ticks), max(y_axis_ticks), colors="#D3D3D3", linestyles="dashed")
         for items in y_axis_ticks:
             plt.hlines(items, x_axis_data.min(), x_axis_data.max(), colors="#D3D3D3", linestyles="dashed")
         plt.legend(loc='best')
@@ -182,7 +187,7 @@ def read_output_plot(path, savepath, if_close_figure):
 
 
 def main():
-    for ind in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 101]:
+    for ind in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]:
         read_output_plot('../logs/' + str(ind) + '/data', '../logs/' + str(ind) + '/', False)
     # read_output_plot('../logs/11/data', '../logs/11/data.png')
 
