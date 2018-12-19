@@ -6,9 +6,9 @@ class Hyperparameters(BaseHyperparameters):
         super().__init__()
         self.model = 'A2C_V'
 
-        self.MAX_EPISODES = 100001  # 50001 : 500
-        self.LEARNING_RATE_ACTOR = 0.000005
-        self.LEARNING_RATE_CRITIC = 0.00001
+        self.MAX_EPISODES = 50001  # 50001 : 500
+        self.LEARNING_RATE_ACTOR = 0.00005
+        self.LEARNING_RATE_CRITIC = 0.0001
         self.DISCOUNT_FACTOR = 0.9
 
         # for test.

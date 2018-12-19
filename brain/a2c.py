@@ -14,18 +14,20 @@ class Actor(object):
 
         # input placeholder
         self.state = network[0][0]
-        self.action = network[0][1]
-        self.td_error = network[0][2]
+        # self.action = network[0][1]
+        self.td_error = network[0][1]
         # output
         self.acts_prob = network[1][0]
         self.exp_v = network[1][1]
         self.train_op = network[1][2]
 
     def learn(self, s, a, td):
+        one_hot_a = np.eye(self.hp.N_ACTIONS)[a]
+        one_hot_td = td[:, np.newaxis] * one_hot_a
         _, exp_v = self.sess.run([self.train_op, self.exp_v],
                                  feed_dict={self.state: s,
-                                            self.action: a.reshape(-1),
-                                            self.td_error: td.reshape(-1)})
+                                            self.td_error: one_hot_td})
+
         # *.reshape(-1) is necessary, or cannot feed (32, 1) to placeholder which has shape (32,)
         if math.isnan(exp_v) is True:
             print('nan for exp_v')
@@ -47,8 +49,8 @@ class Critic(object):
 
         # input placeholder
         self.state = network[0][0]
-        self.action = network[0][1]
-        self.target_value = network[0][2]
+        # self.action = network[0][1]
+        self.target_value = network[0][1]
         # output
         self.value = network[1][0]
         self.td_error = network[1][1]
@@ -66,7 +68,6 @@ class Critic(object):
 
         td_error, _ = self.sess.run([self.td_error, self.train_op],
                                     feed_dict={self.state: s,
-                                               self.action: a.reshape(-1),
                                                self.target_value: target_v_})
         if np.sum(np.isnan(td_error)) >= 1:
             print('nan: {}'.format(np.sum(np.isnan(td_error))))

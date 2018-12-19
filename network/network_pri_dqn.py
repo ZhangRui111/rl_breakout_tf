@@ -34,13 +34,10 @@ def build_network(lr=None, n_stack=None, image_size=None, n_actions=None):
         # (?, 4, 80, 80)
         e_input_crop = eval_net_input / 255
         e_input = tf.transpose(e_input_crop, [0, 2, 3, 1])  # (?, 80, 80, 4)
-
-        e_conv1 = tf.nn.relu(
-            tf.contrib.layers.conv2d(inputs=e_input, num_outputs=32, kernel_size=8, stride=4))  # (?, 20, 20, 32)
-        e_conv2 = tf.nn.relu(
-            tf.contrib.layers.conv2d(inputs=e_conv1, num_outputs=64, kernel_size=4, stride=2))  # (?, 10, 10, 64)
-        e_conv3 = tf.nn.relu(
-            tf.contrib.layers.conv2d(inputs=e_conv2, num_outputs=64, kernel_size=3, stride=1))  # (?, 10, 10, 64)
+        # tf.contrib.layers.conv2d(..., activation_fn=tf.nn.relu,...)
+        e_conv1 = tf.contrib.layers.conv2d(inputs=e_input, num_outputs=32, kernel_size=8, stride=4)  # (?, 20, 20, 32)
+        e_conv2 = tf.contrib.layers.conv2d(inputs=e_conv1, num_outputs=64, kernel_size=4, stride=2)  # (?, 10, 10, 64)
+        e_conv3 = tf.contrib.layers.conv2d(inputs=e_conv2, num_outputs=64, kernel_size=3, stride=1)  # (?, 10, 10, 64)
 
         e_flat = tf.contrib.layers.flatten(e_conv3)
         e_f = tf.contrib.layers.fully_connected(e_flat, 512)
@@ -58,13 +55,10 @@ def build_network(lr=None, n_stack=None, image_size=None, n_actions=None):
         # (?, 4, 80, 80)
         t_input_crop = target_net_input / 255
         t_input = tf.transpose(t_input_crop, [0, 2, 3, 1])  # (?, 80, 80, 4)
-
-        t_conv1 = tf.nn.relu(
-            tf.contrib.layers.conv2d(inputs=t_input, num_outputs=32, kernel_size=8, stride=4))  # (?, 20, 20, 32)
-        t_conv2 = tf.nn.relu(
-            tf.contrib.layers.conv2d(inputs=t_conv1, num_outputs=64, kernel_size=4, stride=2))  # (?, 10, 10, 64)
-        t_conv3 = tf.nn.relu(
-            tf.contrib.layers.conv2d(inputs=t_conv2, num_outputs=64, kernel_size=3, stride=1))  # (?, 10, 10, 64)
+        # tf.contrib.layers.conv2d(..., activation_fn=tf.nn.relu,...)
+        t_conv1 = tf.contrib.layers.conv2d(inputs=t_input, num_outputs=32, kernel_size=8, stride=4)  # (?, 20, 20, 32)
+        t_conv2 = tf.contrib.layers.conv2d(inputs=t_conv1, num_outputs=64, kernel_size=4, stride=2)  # (?, 10, 10, 64)
+        t_conv3 = tf.contrib.layers.conv2d(inputs=t_conv2, num_outputs=64, kernel_size=3, stride=1)  # (?, 10, 10, 64)
 
         t_flat = tf.contrib.layers.flatten(t_conv3)
         t_f = tf.contrib.layers.fully_connected(t_flat, 512)

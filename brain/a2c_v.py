@@ -14,18 +14,19 @@ class Actor(object):
 
         # input placeholder
         self.state = network[0][0]
-        self.action = network[0][1]
-        self.td_error = network[0][2]
+        # self.action = network[0][1]
+        self.td_error = network[0][1]
         # output
         self.acts_prob = network[1][0]
         self.exp_v = network[1][1]
         self.train_op = network[1][2]
 
     def learn(self, s, a, td):
+        one_hot_a = np.eye(self.hp.N_ACTIONS)[a]
+        one_hot_td = td * one_hot_a
         _, exp_v = self.sess.run([self.train_op, self.exp_v],
                                  feed_dict={self.state: s,
-                                            self.action: a.reshape(-1),
-                                            self.td_error: td.reshape(-1)})
+                                            self.td_error: one_hot_td})
         # *.reshape(-1) is necessary, or cannot feed (32, 1) to placeholder which has shape (32,)
         if math.isnan(exp_v) is True:
             print('nan for exp_v')
@@ -57,15 +58,15 @@ class Critic(object):
 
     def learn(self, s, r, s_):
         v_ = self.sess.run(self.value, {self.state: s_})
-        td_error, _ = self.sess.run([self.td_error, self.train_op],
-                                    feed_dict={self.state: s,
-                                               self.next_value: v_.reshape(-1),
-                                               self.reward: r.reshape(-1)})
+        td_error, _, loss = self.sess.run([self.td_error, self.train_op, self.loss],
+                                          feed_dict={self.state: s,
+                                                     self.next_value: v_[:, np.newaxis],
+                                                     self.reward: r[:, np.newaxis]})
         if np.sum(np.isnan(td_error)) >= 1:
             print('nan: {}'.format(np.sum(np.isnan(td_error))))
             raise Exception("nan error")
 
-        return td_error
+        return td_error, loss
 
 
 class A2C(BaseDQN):
@@ -114,8 +115,10 @@ class A2C(BaseDQN):
         reward = np.array(reward)
         observation_ = np.array(observation_)
 
-        td_error = self.critic.learn(observation, reward, observation_)
-        self.actor.learn(observation, action, td_error)
+        td_error, loss = self.critic.learn(observation, reward, observation_)
+        exp_v = self.actor.learn(observation, action, td_error)
+
+        print('critic loss: {0} | actor exp_v: {1}'.format(loss, exp_v))
 
     def preprocess_image(self, img):
         img = img[30:-15, 5:-5:, :]  # image cropping
