@@ -110,7 +110,7 @@ def main():
 
     tf.reset_default_graph()
     # #choose model
-    model = 'a2c'
+    model = 'a2c_v'
 
     if model == 'double_dqn':
         print('double_dqn')
@@ -156,8 +156,20 @@ def main():
         token = 'REINFORCE'  # token is useful when para-adjusting (tick different folder)
         brain = REINFORCE(hp=hp, token=token, network_build=bn)
         train_model(brain, if_REINFORCE=True)
-    elif model == 'a2c':
-        print('a2c')
+    elif model == 'a2c_v':
+        print('a2c_v')
+        from brain.a2c_v import A2C
+        from network.network_a2c_v import build_actor_network, build_critic_network
+        from hyper_paras.hp_a2c_v import Hyperparameters
+
+        hp = Hyperparameters()
+        actor_bn = build_actor_network()
+        critic_bn = build_critic_network()
+        token = 'a2c_v'  # token is useful when para-adjusting
+        brain = A2C(hp=hp, token=token, network_actor=actor_bn, network_critic=critic_bn)
+        train_model(brain, if_a2c=True)
+    elif model == 'a2c_q':
+        print('a2c_q')
         from brain.a2c import A2C
         from network.network_a2c import build_actor_network, build_critic_network
         from hyper_paras.hp_a2c import Hyperparameters
@@ -165,7 +177,7 @@ def main():
         hp = Hyperparameters()
         actor_bn = build_actor_network()
         critic_bn = build_critic_network()
-        token = 'a2c'  # token is useful when para-adjusting
+        token = 'a2c_q'  # token is useful when para-adjusting
         brain = A2C(hp=hp, token=token, network_actor=actor_bn, network_critic=critic_bn)
         train_model(brain, if_a2c=True)
     else:
