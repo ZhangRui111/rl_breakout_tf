@@ -5,6 +5,7 @@ import random
 
 from brain.base_dqns import BaseDQN
 from hyper_paras.hp_a2c import Hyperparameters
+from shared.utils import write_file
 
 
 class Actor(object):
@@ -66,14 +67,14 @@ class Critic(object):
         selected_q_next = r + self.hp.DISCOUNT_FACTOR * np.max(v_, axis=1)
         target_v_[batch_index, a] = selected_q_next
 
-        td_error, _ = self.sess.run([self.td_error, self.train_op],
-                                    feed_dict={self.state: s,
-                                               self.target_value: target_v_})
+        td_error, _, loss = self.sess.run([self.td_error, self.train_op, self.loss],
+                                          feed_dict={self.state: s,
+                                                     self.target_value: target_v_})
         if np.sum(np.isnan(td_error)) >= 1:
             print('nan: {}'.format(np.sum(np.isnan(td_error))))
             raise Exception("nan error")
 
-        return td_error
+        return td_error, loss
 
 
 class A2C(BaseDQN):
@@ -108,6 +109,8 @@ class A2C(BaseDQN):
         self.actor = Actor(self.sess, network=self.network_actor)
         self.critic = Critic(self.sess, network=self.network_critic)
 
+        write_file(self.graph_path + 'loss_exp_v_q.txt', 'critic loss: | actor exp_v:\n', True)
+
     def learn(self, incre_epsilon):
         self.learn_step_counter += 1
 
@@ -122,8 +125,12 @@ class A2C(BaseDQN):
         reward = np.array(reward)
         observation_ = np.array(observation_)
 
-        td_error = self.critic.learn(observation, reward, observation_, action)
-        self.actor.learn(observation, action, td_error)
+        td_error, loss = self.critic.learn(observation, reward, observation_, action)
+        exp_v = self.actor.learn(observation, action, td_error)
+
+        # print('critic loss: {0} | actor exp_v: {1}'.format(loss, exp_v))
+        content = '{0} | {1}\n'.format(loss, exp_v)
+        write_file(self.graph_path + 'loss_exp_v_q.txt', content, False)
 
     def preprocess_image(self, img):
         img = img[30:-15, 5:-5:, :]  # image cropping

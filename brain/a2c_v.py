@@ -5,6 +5,7 @@ import random
 
 from brain.base_dqns import BaseDQN
 from hyper_paras.hp_a2c_v import Hyperparameters
+from shared.utils import write_file
 
 
 class Actor(object):
@@ -60,7 +61,7 @@ class Critic(object):
         v_ = self.sess.run(self.value, {self.state: s_})
         td_error, _, loss = self.sess.run([self.td_error, self.train_op, self.loss],
                                           feed_dict={self.state: s,
-                                                     self.next_value: v_[:, np.newaxis],
+                                                     self.next_value: v_,
                                                      self.reward: r[:, np.newaxis]})
         if np.sum(np.isnan(td_error)) >= 1:
             print('nan: {}'.format(np.sum(np.isnan(td_error))))
@@ -101,6 +102,8 @@ class A2C(BaseDQN):
         self.actor = Actor(self.sess, network=self.network_actor)
         self.critic = Critic(self.sess, network=self.network_critic)
 
+        write_file(self.graph_path + 'loss_exp_v_v.txt', 'critic loss: | actor exp_v:\n', True)
+
     def learn(self, incre_epsilon):
         self.learn_step_counter += 1
 
@@ -118,7 +121,9 @@ class A2C(BaseDQN):
         td_error, loss = self.critic.learn(observation, reward, observation_)
         exp_v = self.actor.learn(observation, action, td_error)
 
-        print('critic loss: {0} | actor exp_v: {1}'.format(loss, exp_v))
+        # print('critic loss: {0} | actor exp_v: {1}'.format(loss, exp_v))
+        content = '{0} | {1}\n'.format(loss, exp_v)
+        write_file(self.graph_path + 'loss_exp_v_v.txt', content, False)
 
     def preprocess_image(self, img):
         img = img[30:-15, 5:-5:, :]  # image cropping

@@ -10,6 +10,7 @@ class Hyperparameters(BaseHyperparameters):
         self.LEARNING_RATE_ACTOR = 0.00005
         self.LEARNING_RATE_CRITIC = 0.0001
         self.DISCOUNT_FACTOR = 0.9
+        self.OUTPUT_SAVER_ITER = 500
 
         # for test.
         # self.OUTPUT_SAVER_ITER = 20

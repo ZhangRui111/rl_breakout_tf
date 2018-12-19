@@ -110,7 +110,7 @@ def main():
 
     tf.reset_default_graph()
     # #choose model
-    model = 'a2c_q'
+    model = 'a2c_v'
 
     if model == 'double_dqn':
         print('double_dqn')
