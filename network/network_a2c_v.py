@@ -38,11 +38,11 @@ def build_actor_network(lr=None, n_stack=None, image_size=None, n_actions=None):
         # prob = -tf.log(tf.clip_by_value(acts_prob, 1e-10, 1.0)) * tf.one_hot(action, n_actions)
         # log_prob = tf.reduce_sum(prob, axis=1)
         # exp_v = tf.reduce_mean(log_prob * td_error)  # advantage (TD_error) guided loss
-        log_prob = tf.log(tf.clip_by_value(acts_prob, 1e-8, 1.0))
+        log_prob = tf.log(tf.clip_by_value(acts_prob, 1e-5, 1.0))
         exp_v = tf.reduce_mean(tf.reduce_sum(log_prob * td_error, axis=1))  # advantage (TD_error) guided loss
 
     with tf.variable_scope('train_'+flag):
-        train_op = tf.train.RMSPropOptimizer(lr).minimize(-exp_v)  # minimize(-exp_v) = maximize(exp_v)
+        train_op = tf.train.AdamOptimizer(lr).minimize(-exp_v)  # minimize(-exp_v) = maximize(exp_v)
 
     return [[state, td_error],
             [acts_prob, exp_v, train_op]]
@@ -64,8 +64,9 @@ def build_critic_network(lr=None, n_stack=None, image_size=None, n_actions=None)
         n_actions = hp.N_ACTIONS
 
     state = tf.placeholder(tf.float32, [None, n_stack, image_size, image_size], 'state_' + flag)
-    next_value = tf.placeholder(tf.float32, [None, 1], 'v_next_' + flag)
-    reward = tf.placeholder(tf.float32, [None, 1], 'r_' + flag)
+    td_target = tf.placeholder(tf.float32, [None, 1], 't_value_' + flag)
+    # next_value = tf.placeholder(tf.float32, [None, 1], 'v_next_' + flag)
+    # reward = tf.placeholder(tf.float32, [None, 1], 'r_' + flag)
 
     with tf.variable_scope('Critic_'+flag):
         input_crop = state / 255
@@ -82,14 +83,14 @@ def build_critic_network(lr=None, n_stack=None, image_size=None, n_actions=None)
 
     with tf.variable_scope('squared_TD_error_'+flag):
         # TD_error = (r+gamma*V_next) - V_eval
-        td_error = reward + hp.DISCOUNT_FACTOR * next_value - value
-        loss = tf.reduce_mean(tf.square(td_error))
+        # td_error = reward + hp.DISCOUNT_FACTOR * next_value - value
+        loss = tf.reduce_mean(tf.squared_difference(value, td_target))
 
     with tf.variable_scope('train_'+flag):
-        train_op = tf.train.RMSPropOptimizer(lr).minimize(loss)
+        train_op = tf.train.AdamOptimizer(lr).minimize(loss)
 
-    return [[state, next_value, reward],
-            [value, td_error, loss, train_op]]
+    return [[state, td_target],
+            [value, loss, train_op]]
 
 
 if __name__ == '__main__':

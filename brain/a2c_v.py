@@ -22,12 +22,12 @@ class Actor(object):
         self.exp_v = network[1][1]
         self.train_op = network[1][2]
 
-    def learn(self, s, a, td):
+    def learn(self, s, a, td_error):
         one_hot_a = np.eye(self.hp.N_ACTIONS)[a]
-        one_hot_td = td * one_hot_a
+        one_hot_td_error = td_error * one_hot_a
         _, exp_v = self.sess.run([self.train_op, self.exp_v],
                                  feed_dict={self.state: s,
-                                            self.td_error: one_hot_td})
+                                            self.td_error: one_hot_td_error})
         # *.reshape(-1) is necessary, or cannot feed (32, 1) to placeholder which has shape (32,)
         if math.isnan(exp_v) is True:
             print('nan for exp_v')
@@ -49,22 +49,26 @@ class Critic(object):
 
         # input placeholder
         self.state = network[0][0]
-        self.next_value = network[0][1]
-        self.reward = network[0][2]
+        self.target_v = network[0][1]
+        # self.next_value = network[0][1]
+        # self.reward = network[0][2]
         # output
         self.value = network[1][0]
-        self.td_error = network[1][1]
-        self.loss = network[1][2]
-        self.train_op = network[1][3]
+        # self.td_error = network[1][1]
+        self.loss = network[1][1]
+        self.train_op = network[1][2]
 
     def learn(self, s, r, s_):
         v_ = self.sess.run(self.value, {self.state: s_})
-        td_error, _, loss = self.sess.run([self.td_error, self.train_op, self.loss],
-                                          feed_dict={self.state: s,
-                                                     self.next_value: v_,
-                                                     self.reward: r[:, np.newaxis]})
-        if np.sum(np.isnan(td_error)) >= 1:
-            print('nan: {}'.format(np.sum(np.isnan(td_error))))
+        v = self.sess.run(self.value, {self.state: s})
+        td_target = r[:, np.newaxis] + self.hp.DISCOUNT_FACTOR * v_
+        td_error = td_target - v
+        _, loss = self.sess.run([self.train_op, self.loss],
+                                feed_dict={self.state: s,
+                                           self.target_v: td_target})
+
+        if np.sum(np.isnan(td_target)) >= 1:
+            print('nan: {}'.format(np.sum(np.isnan(td_target))))
             raise Exception("nan error")
 
         return td_error, loss

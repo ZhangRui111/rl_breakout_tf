@@ -13,7 +13,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 def train_model(brain, if_REINFORCE=False, if_a2c=False):
     env = gym.make('Breakout-v0')
     # env = env.unwrapped
-    # print(env.action_space)
+    # print(env.action_space) # action = {0: null, 1: serve the ball, 2: move right, 3: move left}
     # print(env.observation_space)
     if if_REINFORCE is True or if_a2c is True:
         data_list = np.arange(5).reshape((1, 5))
@@ -29,6 +29,8 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
     for i_episode in range(brain.max_episode):
 
         observation = env.reset()
+        lifes = 6
+        currrent_lifes = 5
         observation = brain.preprocess_image(observation)
         state = np.stack([observation] * 4)
 
@@ -37,8 +39,8 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
         start_time = time.time()
 
         while True:
-            # time.sleep(0.2)
-            # env.render()
+            # time.sleep(0.1)
+            env.render()
             if if_a2c is True:
                 action, probs = brain.actor.choose_action(state)
             elif if_REINFORCE is True:
@@ -46,9 +48,23 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
             else:
                 action = brain.choose_action(state)
 
+            # serve a ball.
+            # print('currrent_lifes: {0} lifes; {1}'.format(currrent_lifes, lifes))
+            if currrent_lifes != lifes or num_step == 0:
+                print('serve a ball.')
+                action = 1
+
+            # print('action: {}'.format(action))
             observation_, reward, done, info = env.step(action)
             observation_ = brain.preprocess_image(observation_)
             next_state = np.concatenate([state[1:], np.expand_dims(observation_, 0)], axis=0)
+            # miss the ball
+            if currrent_lifes != info['ale.lives']:
+                print('miss the ball')
+                reward = -1
+
+            lifes = currrent_lifes
+            currrent_lifes = info['ale.lives']
 
             brain.store_transition(state, action, reward, next_state)
 
@@ -124,6 +140,7 @@ def main():
         token = 'double_dqn'  # token is useful when para-adjusting (tick different folder)
         brain = DeepQNetwork(hp=hp, token=token, network_build=bn)
         train_model(brain)
+
     elif model == 'dueling_dqn':
         print('dueling_dqn')
         from brain.dueling_dqn import DeepQNetwork
