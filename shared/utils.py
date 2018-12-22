@@ -187,7 +187,9 @@ def read_output_plot(path, savepath, if_close_figure):
 
 
 def main():
-    for ind in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]:
+    dqn_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    pri_list = [101, 102, 103]
+    for ind in pri_list:
         read_output_plot('../logs/' + str(ind) + '/data', '../logs/' + str(ind) + '/', False)
     # read_output_plot('../logs/11/data', '../logs/11/data.png')
 

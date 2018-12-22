@@ -37,6 +37,7 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
         start_time = time.time()
 
         while True:
+            # time.sleep(0.2)
             # env.render()
             if if_a2c is True:
                 action, probs = brain.actor.choose_action(state)
