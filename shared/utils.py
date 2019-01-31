@@ -173,7 +173,7 @@ def read_output_plot(path, savepath, if_close_figure):
         plt.xlabel('episodes')
         plt.ylabel('rewards')
         x_axis_ticks = [0, 10000, 20000, 30000, 40000, 50000]
-        y_axis_ticks = [0, 10, 20, 30, 40, 50, 60]
+        y_axis_ticks = [0, 10, 20, 30, 40, 50, 60, 70]
         plt.yticks(y_axis_ticks)
         for items in x_axis_ticks:
             plt.vlines(items, min(y_axis_ticks), max(y_axis_ticks), colors="#D3D3D3", linestyles="dashed")
@@ -187,10 +187,13 @@ def read_output_plot(path, savepath, if_close_figure):
 
 
 def main():
-    dqn_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
-    pri_list = [101, 102, 103]
-    for ind in pri_list:
-        read_output_plot('../logs/' + str(ind) + '/data', '../logs/' + str(ind) + '/', False)
+    dqn_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+    pri_list = [101, 102, 103, 104, 105, 106]
+    double_list = [201, 202, 203, 204, 205]
+    dueling_list = [301, 302, 303, 304, 305]
+    best_list = [18, 106, 203, 205, 302, 305]
+    for ind in dqn_list:
+        read_output_plot('../backup/logs/' + str(ind) + '/data', '../backup/logs/' + str(ind) + '/', False)
     # read_output_plot('../logs/11/data', '../logs/11/data.png')
 
 

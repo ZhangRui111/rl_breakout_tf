@@ -29,8 +29,8 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
     for i_episode in range(brain.max_episode):
 
         observation = env.reset()
-        lifes = 6
-        currrent_lifes = 5
+        # lifes = 6
+        # currrent_lifes = 5
         observation = brain.preprocess_image(observation)
         state = np.stack([observation] * 4)
 
@@ -50,8 +50,10 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
 
             # serve a ball.
             # print('currrent_lifes: {0} lifes; {1}'.format(currrent_lifes, lifes))
-            if currrent_lifes != lifes or num_step == 0:
-                print('serve a ball.')
+            # if currrent_lifes != lifes or num_step == 0:
+            #     print('serve a ball.')
+            #     action = 1
+            if num_step % 10 == 0:
                 action = 1
 
             # print('action: {}'.format(action))
@@ -59,12 +61,12 @@ def train_model(brain, if_REINFORCE=False, if_a2c=False):
             observation_ = brain.preprocess_image(observation_)
             next_state = np.concatenate([state[1:], np.expand_dims(observation_, 0)], axis=0)
             # miss the ball
-            if currrent_lifes != info['ale.lives']:
-                print('miss the ball')
-                reward = -1
+            # if currrent_lifes != info['ale.lives']:
+            #     print('miss the ball')
+            #     reward = -1
 
-            lifes = currrent_lifes
-            currrent_lifes = info['ale.lives']
+            # lifes = currrent_lifes
+            # currrent_lifes = info['ale.lives']
 
             brain.store_transition(state, action, reward, next_state)
 
@@ -127,7 +129,7 @@ def main():
 
     tf.reset_default_graph()
     # #choose model
-    model = 'a2c_v'
+    model = 'a2c_q'
 
     if model == 'double_dqn':
         print('double_dqn')
